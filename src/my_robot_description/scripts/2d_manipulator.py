@@ -9,9 +9,9 @@ import torch
 import tensorflow as tf
 
 
-# tensorboard --logdir D:/log/first_run/
+# tensorboard --logdir /home/nikita/manipulator_ws/src/my_robot_description/scripts/log/PPO_2
 
-# tensorboard  --logdir = D:/Software development/Python/RL/logs
+
 
 
 
@@ -262,7 +262,7 @@ def train(model_name,num_timesteps,algorithm):
         model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000, tensorboard_log="log").learn(total_timesteps=num_timesteps, tb_log_name="DQN")
     if algorithm == 'PPO':
         model = PPO('MlpPolicy', env,device='cuda',verbose=1, tensorboard_log = "log",).learn(total_timesteps=num_timesteps, tb_log_name = "PPO")
-    model.save(model_name)
+    # model.save(model_name)
 
 
 
@@ -282,19 +282,19 @@ def train_old_model(model_name,num_timesteps,algorithm):
 
 if __name__ == '__main__':
 
-    print(tf.config.list_physical_devices('GPU'))
-    print(torch.cuda.get_device_name(0))
-    CUDA = torch.cuda.is_available()
+    # print(tf.config.list_physical_devices('GPU'))
+    # print(torch.cuda.get_device_name(0))
+    # CUDA = torch.cuda.is_available()
 
     # tensorboard_log = "D:\log"
     # tb_log_name = "first_run"
 
-    model_name = "manipulator_DQN"
-    algorithm ="DQN"
-    num_timesteps = 300000
+    model_name = "manipulator_PPO"
+    algorithm ="PPO"
+    num_timesteps = 70000
     env = CustomEnv()
 
-    # train(model_name,num_timesteps,algorithm)
-    train_old_model(model_name,num_timesteps,algorithm)
+    train(model_name,num_timesteps,algorithm)
+    # train_old_model(model_name,num_timesteps,algorithm)
     test(model_name,algorithm)
 
