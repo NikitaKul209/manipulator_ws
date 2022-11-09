@@ -1,0 +1,49 @@
+#Движение к заданному углу
+# Publish all joint states -----------------------------------
+joint_state_controller:
+ type: joint_state_controller/JointStateController
+ publish_rate: 50
+
+# Position Controllers ---------------------------------------
+joint1_position_controller:
+ type: effort_controllers/JointPositionController
+ joint: base_link_link_01
+ pid: {p: 20000.0, i: 100, d: 700.0}
+joint2_position_controller:
+ type: effort_controllers/JointPositionController
+ joint: link_01_link_02
+ pid: {p: 20000.0, i: 100, d: 700.0}
+joint3_position_controller:
+ type: effort_controllers/JointPositionController
+ joint: link_02_link_03
+ pid: {p: 20000.0, i: 50, d: 700.0}
+joint4_position_controller:
+ type: effort_controllers/JointPositionController
+ joint: link_03_link_04
+ pid: {p: 20000.0, i: 50, d: 700.0}
+
+
+
+
+#Разкомментировать для подачи скорости на вход
+
+# joint_state_controller:
+#   type: joint_state_controller/JointStateController
+#   publish_rate: 50
+# joint1_position_controller:
+#   type: effort_controllers/JointVelocityController
+#   joint: base_link_link_01
+#   pid: {p: 20000.0, i: 100, d: 700.0}
+# joint2_position_controller:
+#   type: effort_controllers/JointVelocityController
+#   joint: link_01_link_02
+#   pid: {p: 20000.0, i: 100, d: 700.0}
+# joint3_position_controller:
+#   type: effort_controllers/JointVelocityController
+#   joint: link_02_link_03
+#   pid: {p: 20000.0, i: 50, d: 700.0}
+# joint4_position_controller:
+#   type: effort_controllers/JointVelocityController
+#   joint: link_03_link_04
+#   pid: {p: 20000.0, i: 50, d: 700.0}
+
