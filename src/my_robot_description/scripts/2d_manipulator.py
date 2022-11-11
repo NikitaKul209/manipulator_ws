@@ -9,13 +9,8 @@ import torch
 import tensorflow as tf
 
 
-# tensorboard --logdir /home/nikita/manipulator_ws/src/my_robot_description/scripts/log/PPO_2
+# tensorboard --logdir /home/nikita/manipulator_ws/src/my_robot_description/logs/logs_2d_manipulator/DQN/manipulator_DQN_1
 
-
-
-
-
-# tensorboard --logdir = "D:\Software development\Python\RL\logs"
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
@@ -242,9 +237,9 @@ def test(model_name,algorithm):
 
     obs = env.reset()
     if algorithm == "DQN":
-        model = DQN.load(model_name)
+        model = DQN.load("../models/2d_manipulator_model/"+algorithm+"/"+model_name)
     if algorithm == "PPO":
-        model = PPO.load(model_name)
+        model = PPO.load("../models/2d_manipulator_model/"+algorithm+"/"+model_name)
     i=0
     while True:
         i+=1
@@ -259,10 +254,10 @@ def train(model_name,num_timesteps,algorithm):
 
     obs = env.reset()
     if algorithm == 'DQN':
-        model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000, tensorboard_log="log").learn(total_timesteps=num_timesteps, tb_log_name="DQN")
+        model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000, tensorboard_log="../logs/logs_2d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
     if algorithm == 'PPO':
-        model = PPO('MlpPolicy', env,device='cuda',verbose=1, tensorboard_log = "log",).learn(total_timesteps=num_timesteps, tb_log_name = "PPO")
-    # model.save(model_name)
+        model = PPO('MlpPolicy', env,device='cuda',verbose=1, tensorboard_log = "../logs/logs_2d_manipulator/PPO",).learn(total_timesteps=num_timesteps, tb_log_name = model_name)
+    model.save("../models/2d_manipulator_model/"+algorithm+"/"+model_name)
 
 
 
@@ -270,14 +265,14 @@ def train(model_name,num_timesteps,algorithm):
 def train_old_model(model_name,num_timesteps,algorithm):
 
     if algorithm == "DQN":
-        model = DQN.load(model_name)
+        model = DQN.load("../models/2d_manipulator_model/"+algorithm+"/"+model_name)
 
-    if algorithm =="PPO":
-        model = PPO.load(model_name)
+    if algorithm == "PPO":
+        model = PPO.load("../models/2d_manipulator_model/"+algorithm+"/"+model_name)
 
     model.set_env(env)
-    model.learn(total_timesteps=num_timesteps)
-    model.save(model_name)
+    model.learn(total_timesteps=num_timesteps,tb_log_name=model_name)
+    model.save("../models/2d_manipulator_model/"+algorithm+"/"+model_name)
 
 
 if __name__ == '__main__':
@@ -285,16 +280,16 @@ if __name__ == '__main__':
     # print(tf.config.list_physical_devices('GPU'))
     # print(torch.cuda.get_device_name(0))
     # CUDA = torch.cuda.is_available()
-
-    # tensorboard_log = "D:\log"
-    # tb_log_name = "first_run"
-
+    env = CustomEnv()
+    env.x_goal = 6
+    env.y_goal = 6
     model_name = "manipulator_PPO"
     algorithm ="PPO"
     num_timesteps = 70000
-    env = CustomEnv()
 
-    train(model_name,num_timesteps,algorithm)
+
+
+    # train(model_name,num_timesteps,algorithm)
     # train_old_model(model_name,num_timesteps,algorithm)
-    test(model_name,algorithm)
+    # test(model_name,algorithm)
 

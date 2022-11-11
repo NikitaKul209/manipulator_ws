@@ -11,10 +11,7 @@ import torch
 import tensorflow as tf
 import os
 
-# tensorboard --logdir D:/log/first_run/
-
-# tensorboard  --logdir = D:/Software development/Python/RL/logs
-
+#tensorboard --logdir /home/nikita/manipulator_ws/src/my_robot_description/logs/logs_2d_manipulator_GoalEnv/manipulator_DQN_HER_1
 
 
 # tensorboard --logdir = "D:\Software development\Python\RL\logs"
@@ -172,9 +169,6 @@ class CustomEnv(gym.GoalEnv):
         return observation, reward, done, info
 
 
-
-
-
     def step(self,action):
         observation,reward,done, info = self._step(action)
         self.compute_reward(np.array([observation[4],observation[5]]),self.desired_goal,info)
@@ -312,7 +306,7 @@ def _test(model_name):
 
 
 def test(model_name):
-    model = DQN.load(model_name,env=env)
+    model = DQN.load("../models/2d_manipulator_model_GoalEnv/"+model_name,env=env)
     obs = env.reset()
     i=0
     while True:
@@ -332,7 +326,7 @@ def train(model_name,num_timesteps):
     model = DQN(
         "MultiInputPolicy",
         env,
-        tensorboard_log="log",
+        tensorboard_log="../logs/logs_2d_manipulator_GoalEnv/"+model_name,
         replay_buffer_class=HerReplayBuffer,
         # Parameters for HER
         replay_buffer_kwargs=dict(
@@ -342,27 +336,27 @@ def train(model_name,num_timesteps):
             max_episode_length=4,
         ),
         verbose=1,
-    ).learn(total_timesteps=num_timesteps,tb_log_name = "DQN_HER")
-    model.save(model_name)
+    ).learn(total_timesteps=num_timesteps,tb_log_name = model_name)
+    model.save("../models/2d_manipulator_model_GoalEnv/"+model_name)
 
 
 def train_old_model(model_name,num_timesteps):
 
     model = DQN.load(model_name)
     model.set_env(env)
-    model.learn(total_timesteps=num_timesteps)
-    model.save(model_name)
+    model.learn(total_timesteps=num_timesteps,tb_log_name=model_name)
+    model.save("../models/2d_manipulator_model_GoalEnv/"+model_name)
 
 
 if __name__ == '__main__':
 
     num_timesteps = 1100000
-    model_name = "manipulator_DQN_HER2"
+    model_name = "manipulator_DQN_HER"
 
     env = CustomEnv()
     check_env(env)
     # train(model_name,num_timesteps)
     # train_old_model(model_name,num_timesteps)
-    test(model_name)
+    # test(model_name)
 
 

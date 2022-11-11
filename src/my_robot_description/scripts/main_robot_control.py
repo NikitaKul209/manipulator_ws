@@ -160,9 +160,9 @@ class CustomEnv(gym.Env):
 
 def test(model_name,algorithm):
     if algorithm == 'PPO':
-        model = PPO.load(model_name)
+        model = PPO.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
     if algorithm == 'DQN':
-        model = DQN.load(model_name)
+        model = DQN.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
     obs = env.reset()
     i=0
     try:
@@ -179,29 +179,29 @@ def test(model_name,algorithm):
     except rospy.ROSInterruptException:
         pass
 
-def training(model_name, algorithm,num_timesteps):
+def train(model_name, algorithm,num_timesteps):
 
         env.reset()
         try:
             if algorithm == 'DQN':
-                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000,tensorboard_log="log").learn(total_timesteps=num_timesteps, tb_log_name="DQN")
+                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
             if algorithm =="PPO":
-                model = PPO('MlpPolicy', env, device='cuda',verbose=1,tensorboard_log="log").learn(total_timesteps=num_timesteps,tb_log_name="PPO")
+                model = PPO('MlpPolicy', env, device='cuda',verbose=1,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/PPO").learn(total_timesteps=num_timesteps,tb_log_name=model_name)
             print("Обучение завершено!")
-            model.save(model_name)
+            model.save("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
         except rospy.ROSInterruptException:
             pass
 
-def train_old_model():
+def train_old_model(algorithm,model_name,num_timesteps):
 
     if algorithm == "DQN":
-        model = DQN.load(model_name)
+        model = DQN.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
     if algorithm == "PPO":
-        model = PPO.load(model_name)
+        model = PPO.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
 
     model.set_env(env)
-    model.learn(total_timesteps=num_timesteps)
-    model.save(model_name)
+    model.learn(total_timesteps=num_timesteps,tb_log_name=model_name)
+    model.save("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
 
 
 if __name__ == "__main__":
@@ -212,27 +212,12 @@ if __name__ == "__main__":
     num_timesteps = 80000
 
     env = CustomEnv()
+    env.x_goal = -1
+    env.y_goal = 1
+    env.z_goal = 2
     time.sleep(2)
-    # training(model_name,algorithm,num_timesteps)
-    test(model_name,algorithm)
+    train(model_name,algorithm,num_timesteps)
+    # test(model_name,algorithm)
 exit(0)
-
-
-
-#     obs = env.reset()
-#     while not rospy.is_shutdown():
-#         try:
-#             model = PPO('MlpPolicy', env, device='cpu').learn(total_timesteps=num_timesteps)
-#             print("Обучение завершено!")
-#             model.save(model_name)
-#             model.load(model_name)
-#             while True:
-#                 print("Идёт тестирование")
-#                 action, _states = model.predict(obs)
-#                 obs, rewards, dones, info = env.step(action)
-#                 # env.render()
-#         except rospy.ROSInterruptException:
-#             pass
-# exit(0)
 
 

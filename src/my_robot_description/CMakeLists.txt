@@ -164,7 +164,6 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/main_robot_control.py
-  scripts/Robot_conrol_CoppeliaSim.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
