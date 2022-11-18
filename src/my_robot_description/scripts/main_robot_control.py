@@ -26,6 +26,9 @@ from pcg_gazebo.simulation.physics import Physics
 
 
 
+# tensorboard --logdir=/home/nikita/manipulator_ws/src/my_robot_description/logs/logs_3d_manipulator/PPO/manipulator_PPO_1
+
+
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
@@ -216,8 +219,8 @@ if __name__ == "__main__":
     env.y_goal = 1
     env.z_goal = 2
     time.sleep(2)
-    train(model_name,algorithm,num_timesteps)
-    # test(model_name,algorithm)
+    # train(model_name,algorithm,num_timesteps)
+    test(model_name,algorithm)
 exit(0)
 
 

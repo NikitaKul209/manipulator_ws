@@ -1,6 +1,7 @@
 import random
+import time
 from typing import Dict
-from stable_baselines3 import PPO,SAC,DQN,HerReplayBuffer
+from stable_baselines3 import PPO,SAC,DQN,HerReplayBuffer,HER
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.env_checker import check_env
 import math
@@ -11,10 +12,10 @@ import torch
 import tensorflow as tf
 import os
 
-#tensorboard --logdir /home/nikita/manipulator_ws/src/my_robot_description/logs/logs_2d_manipulator_GoalEnv/manipulator_DQN_HER_1
+
+# tensorboard --logdir=/home/nikita/manipulator_ws/src/my_robot_description/logs/logs_2d_manipulator_GoalEnv/manipulator_DQN_HER/manipulator_DQN_HER_9
 
 
-# tensorboard --logdir = "D:\Software development\Python\RL\logs"
 class CustomEnv(gym.GoalEnv):
     """Custom Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
@@ -31,11 +32,11 @@ class CustomEnv(gym.GoalEnv):
         self.y00 = 1
 
         self.x_goal = 6
-        self.y_goal = -2            # В какую точку должен попасть конец второго звена
+        self.y_goal = 0            # В какую точку должен попасть конец второго звена
         self.goal=[self.x_goal,self.y_goal]
 
-        self.delta_x = 0.2
-        self.delta_y = 0.2          # Допустимая разница между реальным положением конца звена и целью
+        self.delta_x = 0.3
+        self.delta_y = 0.3          # Допустимая разница между реальным положением конца звена и целью
 
         self.angle_1 = 0
         self.angle_2 = 0            # На какой угол повернуть каждому из звеньев
@@ -54,6 +55,8 @@ class CustomEnv(gym.GoalEnv):
         self.reset_flag = 0
         self.done = False
         self.error = 0
+        self.iteration = 0
+        self.time_lim = 0
 
 
         for i in range(-160, 165, 5):
@@ -64,9 +67,9 @@ class CustomEnv(gym.GoalEnv):
         self.action_space = gym.spaces.Discrete(len(self.possible_angles))
         self.observation_space = gym.spaces.Box(low=np.float32(np.array([-160.0, -160.0,-20,-20,-20,-20])),high= np.float32(np.array([160.0,160.0,20,20,20,20])),dtype = np.float32,shape=(6,))
         self.observation_space = gym.spaces.Dict(dict(
-            observation=gym.spaces.Box(low=np.float32(np.array([-160.0, -160.0,-20,-20,-20,-20])),high= np.float32(np.array([160.0,160.0,20,20,20,20])),dtype = np.float32,shape=(6,)),
+            observation=gym.spaces.Box(low=np.float32(np.array([-160.0, -160.0,-10,-10,-10,-10])),high= np.float32(np.array([160.0,160.0,10,10,10,10])),dtype = np.float32,shape=(6,)),
             achieved_goal=gym.spaces.Box(low=np.float32(np.array([-10.0,-10.0])),high=np.float32(np.array([10.0,10.0])), dtype=np.float32,shape=(2,)),
-            desired_goal=gym.spaces.Box(low=np.float32(np.array([-10.0,-10.0])),high=np.float32(np.array([10.0,10.0])), dtype=np.float32, shape=(2,)),
+            desired_goal=gym.spaces.Box(low=np.float32(np.array([-10.0,-10.0])),high=np.float32(np.array([20.0,10.0])), dtype=np.float32, shape=(2,)),
         ))
 
         self.desired_goal = np.float32(self.goal)
@@ -79,7 +82,7 @@ class CustomEnv(gym.GoalEnv):
 
         self.real_angle_first_old = self.real_angle_first
         self.real_angle_first += self.angle_1
-        if self.real_angle_first > 160:
+        if self.real_angle_first > 160:                  #Если угол больше или меньше максимального значения, то угол равен максимальному значению
             self.real_angle_first = 160
             angle1 =  160 - self.real_angle_first_old
             self.done = True
@@ -125,15 +128,16 @@ class CustomEnv(gym.GoalEnv):
         return x11,y11,x1,y1
 
     def reward_calc(self):
-        d = math.sqrt(math.fabs(((self.goal[0] - self.x00)**2)+(self.goal[1] - self.y00)**2))
+        d = math.sqrt(math.fabs(((self.x_goal - self.x00)**2)+(self.y_goal - self.y00)**2))
         self.reward = math.exp(-d)
         if math.fabs(self.x00 - self.x_goal) < self.delta_x and math.fabs(self.y00 - self.y_goal) < self.delta_y \
                 and (self.real_angle_second and self.real_angle_first) in range(-160, 165):
             self.done = True
             self.reward = 100
         if self.error == True:
-            self.reward = -1
+            self.reward = -10
             self.error = False
+            self.done = True
 
         return self.reward
 
@@ -153,7 +157,8 @@ class CustomEnv(gym.GoalEnv):
             "__________________________________________________________________________________________________________")
 
         print(
-            'Цель: {}\nВыбраны углы:{}\nНаграда: {}\nТекущее положение по: X {}\nТекущее положение по: Y {}\n Предыдущий угол_1:{}\nПредыдущий угол_2:{}\n Текущий угол_1: {}\nТекущий угол_2: {}'.format(
+            'Итерация: {}\nЦель: {}\nВыбраны углы: {}\nНаграда: {}\nТекущее положение по: X {}\nТекущее положение по: Y {}\n Предыдущий угол_1:{}\nПредыдущий угол_2:{}\n Текущий угол_1: {}\nТекущий угол_2: {}'.format(
+                self.iteration,
                 self.goal,
                 self.angles,
                 self.reward,
@@ -170,6 +175,11 @@ class CustomEnv(gym.GoalEnv):
 
 
     def step(self,action):
+        self.iteration += 1
+        self.time_lim +=1
+        if self.time_lim >=500:
+
+            self.done =True
         observation,reward,done, info = self._step(action)
         self.compute_reward(np.array([observation[4],observation[5]]),self.desired_goal,info)
         observation = self.transform_observation(observation)
@@ -183,6 +193,24 @@ class CustomEnv(gym.GoalEnv):
 
         self.x00 = 7  # Начальное положение конца второго звена
         self.y00 = 1
+
+
+        # if self.iteration >= 1000000:
+        #     self.desired_goal[0], self.desired_goal[1] = 6,0
+        #     self.goal[0], self.goal[1] = 6,0
+        #     self.x_goal, self.y_goal = 6,0
+        if self.iteration >= 2000000:
+            self.desired_goal[0], self.desired_goal[1] = 6,-6
+            self.goal[0], self.goal[1] = 6, -6
+            self.x_goal, self.y_goal = 6, -6
+
+
+
+        # self.desired_goal[0],self.desired_goal[1] = random.randint(-9,9),random.randint(-9,9)
+        # self.goal[0],self.goal[1] = self.desired_goal[0],self.desired_goal[1]
+        # self.x_goal,self.y_goal = self.desired_goal[0],self.desired_goal[1]
+
+
         self.real_angle_first_old = 0
         self.real_angle_second_old = 0
         self.real_angle_first = 0
@@ -199,6 +227,7 @@ class CustomEnv(gym.GoalEnv):
 
         self.reward = 0
         self.done = False
+        self.time_lim = 0
 
         observation = np.float32(
             np.array([self.real_angle_first, self.real_angle_second, self.x0, self.y0, self.x00, self.y00]))
@@ -206,40 +235,8 @@ class CustomEnv(gym.GoalEnv):
         print("Сброс, новое состояние,", observation)
         return observation  # reward, done, info can't be included
 
-    def _reset(self):
-
-
-        self.x0 = 3  # Начальное положение конца первого звена
-        self.y0 = 4
-
-        self.x00 = 7                # Начальное положение конца второго звена
-        self.y00 = 1
-        self.real_angle_first_old =  0
-        self.real_angle_second_old = 0
-        self.real_angle_first =  0
-        self.real_angle_second = 0
-
-        a1 = random.randint(0, len(self.possible_angles2)-1)
-        a2 = random.randint(0, len(self.possible_angles2)-1)
-
-        self.angle_1 = self.possible_angles2[a1]
-        self.angle_2 = self.possible_angles2[a2]
-        self.calc(self.angle_1,self.angle_2)
-        print("Выполнен сброс, выбраны углы: {} и {}".format(self.real_angle_first, self.real_angle_second))
-        print("Координаты точек после сброса", self.x00,self.y00)
-
-        self.reward = 0
-        self.done = False
-
-        observation = np.float32(
-            np.array([self.real_angle_first, self.real_angle_second, self.x0, self.y0, self.x00, self.y00]))
-        print("Сброс, новое состояние,", observation)
-
-
-        return observation  # reward, done, info can't be included
-
-
     def transform_observation(self, observation) -> Dict :
+        self.desired_goal = np.float32([self.x_goal,self.y_goal])
         return {
             "observation": observation,
             "achieved_goal": np.array([observation[4],observation[5]]),
@@ -251,7 +248,7 @@ class CustomEnv(gym.GoalEnv):
     def render(self, mode='human'):
         print("__________________________________________________________________________________________________________")
 
-        print('Награда {}\nЦель {}\nТекущее положение по X {}\nТекущее положение по Y {}\nТекущий угол_1 {}\nТекущий угол_2 {}' .format(self.reward,
+        print('Итерация {}\nНаграда {}\nЦель {}\nТекущее положение по X {}\nТекущее положение по Y {}\nТекущий угол_1 {}\nТекущий угол_2 {}' .format(self.iteration,self.reward,
                                                                                                       self.goal,
                                                                                                       self.x00,
                                                                                                       self.y00,
@@ -287,24 +284,6 @@ class CustomEnv(gym.GoalEnv):
     def close (self):
         pass
 
-
-
-def _test(model_name):
-
-    obs = env.reset()
-    model = PPO.load(model_name)
-    # model = DQN.load(model_name)
-    i=0
-    while True:
-        i+=1
-        action, _states = model.predict(obs, deterministic=True)
-        obs, rewards, dones, info = env.step(action)
-        env.graf()
-        if i == 60:
-            env.reset()
-            i=0
-
-
 def test(model_name):
     model = DQN.load("../models/2d_manipulator_model_GoalEnv/"+model_name,env=env)
     obs = env.reset()
@@ -322,19 +301,20 @@ def test(model_name):
 
 def train(model_name,num_timesteps):
 
+
+    replay_buffer_class = HerReplayBuffer
+    replay_buffer_kwargs = dict(n_sampled_goal=4, goal_selection_strategy="future", max_episode_length=4,
+                                online_sampling=True)
+
+
     obs = env.reset()
     model = DQN(
         "MultiInputPolicy",
         env,
         tensorboard_log="../logs/logs_2d_manipulator_GoalEnv/"+model_name,
-        replay_buffer_class=HerReplayBuffer,
+        replay_buffer_class = replay_buffer_class,
         # Parameters for HER
-        replay_buffer_kwargs=dict(
-            n_sampled_goal=4,
-            goal_selection_strategy="future",
-            online_sampling=True,
-            max_episode_length=4,
-        ),
+        replay_buffer_kwargs = replay_buffer_kwargs,
         verbose=1,
     ).learn(total_timesteps=num_timesteps,tb_log_name = model_name)
     model.save("../models/2d_manipulator_model_GoalEnv/"+model_name)
@@ -342,7 +322,7 @@ def train(model_name,num_timesteps):
 
 def train_old_model(model_name,num_timesteps):
 
-    model = DQN.load(model_name)
+    model = DQN.load("../models/2d_manipulator_model_GoalEnv/"+model_name,env=env)
     model.set_env(env)
     model.learn(total_timesteps=num_timesteps,tb_log_name=model_name)
     model.save("../models/2d_manipulator_model_GoalEnv/"+model_name)
@@ -350,13 +330,13 @@ def train_old_model(model_name,num_timesteps):
 
 if __name__ == '__main__':
 
-    num_timesteps = 1100000
+    num_timesteps = 4000000
     model_name = "manipulator_DQN_HER"
 
     env = CustomEnv()
     check_env(env)
     # train(model_name,num_timesteps)
     # train_old_model(model_name,num_timesteps)
-    # test(model_name)
+    test(model_name)
 
 

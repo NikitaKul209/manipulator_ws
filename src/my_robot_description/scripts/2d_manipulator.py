@@ -8,8 +8,8 @@ import numpy as np
 import torch
 import tensorflow as tf
 
+#tensorboard --logdir=/home/nikita/manipulator_ws/src/my_robot_description/logs/logs_2d_manipulator/DQN/manipulator_DQN_2
 
-# tensorboard --logdir /home/nikita/manipulator_ws/src/my_robot_description/logs/logs_2d_manipulator/DQN/manipulator_DQN_1
 
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
@@ -26,12 +26,12 @@ class CustomEnv(gym.Env):
         self.x00 = 7                # Начальное положение конца второго звена
         self.y00 = 1
 
-        self.x_goal = 4
+        self.x_goal = 6
         self.y_goal = 6            # В какую точку должен попасть конец второго звена
         self.goal=[self.x_goal,self.y_goal]
 
-        self.delta_x = 0.3
-        self.delta_y = 0.3          # Допустимая разница между реальным положением конца звена и целью
+        self.delta_x = 0.2
+        self.delta_y = 0.2          # Допустимая разница между реальным положением конца звена и целью
 
         self.angle_1 = 0
         self.angle_2 = 0            # На какой угол повернуть каждому из звеньев
@@ -283,13 +283,13 @@ if __name__ == '__main__':
     env = CustomEnv()
     env.x_goal = 6
     env.y_goal = 6
-    model_name = "manipulator_PPO"
-    algorithm ="PPO"
-    num_timesteps = 70000
+    model_name = "manipulator_DQN"
+    algorithm ="DQN"
+    num_timesteps = 700000
 
 
 
-    # train(model_name,num_timesteps,algorithm)
+    train(model_name,num_timesteps,algorithm)
     # train_old_model(model_name,num_timesteps,algorithm)
-    # test(model_name,algorithm)
+    test(model_name,algorithm)
 
