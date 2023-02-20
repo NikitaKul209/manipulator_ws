@@ -7,4 +7,4 @@
 # new environment variables
 
 # modified environment variables
-export PWD='/home/nikita/manipulator_ws/build'
+export PWD='/home/nikita/Projects/manipulator_ws/build'

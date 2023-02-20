@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import gym
 import numpy as np
 import torch
-import tensorflow as tf
+# import tensorflow as tf
 
 #tensorboard --logdir=/home/nikita/manipulator_ws/src/my_robot_description/logs/logs_2d_manipulator/DQN/manipulator_DQN_2
 
@@ -278,8 +278,8 @@ def train_old_model(model_name,num_timesteps,algorithm):
 if __name__ == '__main__':
 
     # print(tf.config.list_physical_devices('GPU'))
-    # print(torch.cuda.get_device_name(0))
-    # CUDA = torch.cuda.is_available()
+    print(torch.cuda.get_device_name(0))
+    CUDA = torch.cuda.is_available()
     env = CustomEnv()
     env.x_goal = 6
     env.y_goal = 6

@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/nikita/manipulator_ws/src
+CMAKE_SOURCE_DIR = /home/nikita/Projects/manipulator_ws/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/nikita/manipulator_ws/build
+CMAKE_BINARY_DIR = /home/nikita/Projects/manipulator_ws/build
 
 # Utility rule file for tf2_msgs_generate_messages_eus.
 
@@ -63,10 +63,10 @@ my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/build: tf2_ms
 .PHONY : my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/build
 
 my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/clean:
-	cd /home/nikita/manipulator_ws/build/my_robot_description && $(CMAKE_COMMAND) -P CMakeFiles/tf2_msgs_generate_messages_eus.dir/cmake_clean.cmake
+	cd /home/nikita/Projects/manipulator_ws/build/my_robot_description && $(CMAKE_COMMAND) -P CMakeFiles/tf2_msgs_generate_messages_eus.dir/cmake_clean.cmake
 .PHONY : my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/clean
 
 my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/depend:
-	cd /home/nikita/manipulator_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/nikita/manipulator_ws/src /home/nikita/manipulator_ws/src/my_robot_description /home/nikita/manipulator_ws/build /home/nikita/manipulator_ws/build/my_robot_description /home/nikita/manipulator_ws/build/my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/nikita/Projects/manipulator_ws/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/nikita/Projects/manipulator_ws/src /home/nikita/Projects/manipulator_ws/src/my_robot_description /home/nikita/Projects/manipulator_ws/build /home/nikita/Projects/manipulator_ws/build/my_robot_description /home/nikita/Projects/manipulator_ws/build/my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : my_robot_description/CMakeFiles/tf2_msgs_generate_messages_eus.dir/depend
 

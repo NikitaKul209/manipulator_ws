@@ -1,4 +1,4 @@
-prefix=/home/nikita/manipulator_ws/devel
+prefix=/home/nikita/Projects/manipulator_ws/devel
 
 Name: my_robot_description
 Description: Description of my_robot_description

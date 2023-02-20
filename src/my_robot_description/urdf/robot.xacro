@@ -6,6 +6,7 @@
     <xacro:include filename="$(find my_robot_description)/urdf/links_joints.xacro"/>
 
     <xacro:m_link_box name="base_link" origin_rpy="0 0 0" origin_xyz="0 0 0" size ="1 1 1" mass = "1024" ixx="170.667" ixy="0" ixz="0" iyy="170.667" iyz="0" izz="170.667"/>
+
     <xacro:m_link_cylinder name = "link_01" origin_xyz= "0 0 0.2 " origin_rpy = "0 0 0" radius= "0.35" length= "0.4" mass = "157.663" ixx="13.235" ixy="0" ixz="0" iyy="13.235" iyz="0" izz="9.655"/>
     <xacro:m_link_cylinder name = "link_02" origin_xyz= "0 0 0.4 " origin_rpy = "0 0 0" radius= "0.08" length= "0.8" mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
     <xacro:m_link_cylinder name = "link_03" origin_xyz= "0 0 0.4 " origin_rpy = "0 0 0" radius= "0.08" length= "0.8" mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>

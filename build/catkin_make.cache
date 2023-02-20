@@ -1,2 +1,2 @@
 my_robot_description
--DCATKIN_DEVEL_PREFIX=/home/nikita/manipulator_ws/devel -DCMAKE_INSTALL_PREFIX=/home/nikita/manipulator_ws/install -G Unix Makefiles
+-DCATKIN_DEVEL_PREFIX=/home/nikita/Projects/manipulator_ws/devel -DCMAKE_INSTALL_PREFIX=/home/nikita/Projects/manipulator_ws/install -G Unix Makefiles

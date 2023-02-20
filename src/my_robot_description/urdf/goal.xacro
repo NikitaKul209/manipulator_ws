@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<robot name="goal"
+    xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find my_robot_description)/urdf/links_joints.xacro"/>
+
+    <xacro:m_link_sphere name="goal_link" origin_rpy="0 0 0" origin_xyz="0 0 0" radius ="0.1" mass = "1 " ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+
+    <gazebo reference = "goal_link">
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+        </plugin>
+        <gravity>0</gravity>
+    </gazebo>
+</robot>
+

@@ -22,7 +22,7 @@ from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.srv import *
 from stable_baselines3 import PPO,DQN
 from stable_baselines3.common.env_checker import check_env
-from pcg_gazebo.simulation.physics import Physics
+
 
 
 
@@ -43,9 +43,9 @@ class CustomEnv(gym.Env):
         self.z_goal = 2
         self.goal=[self.x_goal,self.y_goal,self.z_goal]
 
-        self.delta_x = 0.2
-        self.delta_y = 0.2
-        self.delta_z = 0.2
+        self.delta_x = 0.1
+        self.delta_y = 0.1
+        self.delta_z = 0.1
 
         self.angle1 = 0
         self.angle2 = 0
@@ -55,10 +55,10 @@ class CustomEnv(gym.Env):
 
         self.position = [1,2,3]
         self.possible_angles = []  # Возможные значения углов для поворота
-        for i in range(-5, 10, 5):
+        for i in range(-2, 4, 2):
             self.possible_angles.append(i)
 
-        fi = 5
+        fi = 2
 
 
         self.commands = [(0, 0, 0), (0, 0, fi),(0, fi, 0),(0, fi, fi),(fi, 0, 0),(fi, 0, fi),(fi, fi, 0),
@@ -71,6 +71,7 @@ class CustomEnv(gym.Env):
 
         self.error = 0
         self.iteration = 0
+        self.episode_length = 0
         self.action_space = gym.spaces.Discrete(len(self.commands))
         self.observation_space = gym.spaces.Box(low=np.float32(np.array([-180,-90.0,-90.0,-20,-20,-20])),high= np.float32(np.array([180,90.0,90.0,20,20,20])),dtype = np.float32,shape=(6,))
 
@@ -84,7 +85,9 @@ class CustomEnv(gym.Env):
         env.position = position
 
     def step(self, action):
+
         self.iteration +=1
+        self.episode_length +=1
         self.angles[0] += self.commands[action][0]
         self.angles[1] += self.commands[action][1]
         self.angles[2] += self.commands[action][2]
@@ -112,31 +115,32 @@ class CustomEnv(gym.Env):
 
         self.move_manipulator()
         reward = self.reward_calc()
+        if self.episode_length >=500:
+            self.episode_length = 0
+            self.done = True
+
 
         observation = np.float32(np.array([self.angles[0],self.angles[1],self.angles[2], self.position[0], self.position[1], self.position[2]]))
         done = self.done
         info = {}
-        print("Итерация: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: {}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".format(self.iteration,self.goal,self.commands[action],self.angles[0],self.angles[1],self.angles[2],self.position[0],self.position[1],self.position[2],self.reward))
+        print("Итерация: {}\nТекущая длина эпизода: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: {}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".format(self.iteration,self.episode_length,self.goal,self.commands[action],self.angles[0],self.angles[1],self.angles[2],self.position[0],self.position[1],self.position[2],self.reward))
         rospy.sleep(0.001)
         return observation, reward, done, info
 
     def reward_calc(self):
+
         d = math.sqrt(math.fabs(((self.goal[0] - self.position[0])**2)+(self.goal[1] - self.position[1])**2)+(self.goal[2] - self.position[2])**2)
         self.reward = math.exp(-d)
 
         if math.fabs(self.position[0] - self.x_goal) < self.delta_x and math.fabs(self.position[1]  - self.y_goal) < self.delta_y and math.fabs(self.position[2]  - self.z_goal) < self.delta_z \
                 and (self.angles[1] and self.angles[2]) in range(-160, 165):
             self.done = 1
-            self.reward = 100
+            self.reward =1000
 
-        if not (self.angles[1] or self.angles[2]) in range(-90, 95):
-            self.done = 1
-            self.reward = -1
-
-        if self.error == 1:
-            self.done = 1
-            self.reward = -10
-
+        # if self.error == 1:
+        #     self.done = 1
+        #     self.reward = -100
+        self.error = 0
         return self.reward
 
     def move_manipulator(self):
@@ -150,9 +154,10 @@ class CustomEnv(gym.Env):
     def reset(self):
         self.done = False
         self.error = 0
-        a1 = random.randrange(-180, 180, 5)
-        a2 = random.randrange(-90, 90, 5)
-        a3 = random.randrange(-90, 90, 5)
+        self.episode_length = 0
+        a1 = random.randrange(-180, 180, 2)
+        a2 = random.randrange(-90, 90, 2)
+        a3 = random.randrange(-90, 90, 2)
 
         self.angles = [a1,a2,a3]
         self.move_manipulator()
@@ -160,6 +165,28 @@ class CustomEnv(gym.Env):
 
         observation = np.float32(np.array([self.angles[0],self.angles[1],self.angles[2], self.position[0], self.position[1], self.position[2]]))
         return observation  # reward, done, info can't be included
+
+    def set_goal(self):
+
+        rospy.wait_for_service('my_robot/gazebo/set_model_state')
+        set_state_service = rospy.ServiceProxy('/my_robot/gazebo/set_model_state', SetModelState)
+        objstate = SetModelStateRequest()  # Create an object of type SetModelStateRequest
+        objstate.model_state.model_name = "goal"
+        objstate.model_state.pose.position.x = 1.0
+        objstate.model_state.pose.position.y = 1.0
+        objstate.model_state.pose.position.z = 1.0
+        objstate.model_state.pose.orientation.w = 0.0
+        objstate.model_state.pose.orientation.x = 0
+        objstate.model_state.pose.orientation.y = 0
+        objstate.model_state.pose.orientation.z = 0.0
+        objstate.model_state.twist.linear.x = 0.0
+        objstate.model_state.twist.linear.y = 0.0
+        objstate.model_state.twist.linear.z = 0.0
+        objstate.model_state.twist.angular.x = 0.0
+        objstate.model_state.twist.angular.y = 0.0
+        objstate.model_state.twist.angular.z = 0.0
+        result = set_state_service(objstate)
+
 
 def test(model_name,algorithm):
     if algorithm == 'PPO':
@@ -170,12 +197,10 @@ def test(model_name,algorithm):
     i=0
     try:
         while not rospy.is_shutdown():
-            i += 1
             print("Идёт тестирование")
             action, _states = model.predict(obs)
             obs, rewards, dones, info = env.step(action)
-            if i == 500:
-                i=0
+            if rewards >= 100:
                 time.sleep(3)
                 env.reset()
 
@@ -187,9 +212,9 @@ def train(model_name, algorithm,num_timesteps):
         env.reset()
         try:
             if algorithm == 'DQN':
-                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
+                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000,gamma=0.95,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
             if algorithm =="PPO":
-                model = PPO('MlpPolicy', env, device='cuda',verbose=1,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/PPO").learn(total_timesteps=num_timesteps,tb_log_name=model_name)
+                model = PPO('MlpPolicy', env, device='cuda',verbose=1,gamma=0.8,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/PPO").learn(total_timesteps=num_timesteps,tb_log_name=model_name)
             print("Обучение завершено!")
             model.save("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
         except rospy.ROSInterruptException:
@@ -210,16 +235,17 @@ def train_old_model(algorithm,model_name,num_timesteps):
 if __name__ == "__main__":
     rospy.init_node("manipulator_control", anonymous=True)
 
-    model_name = "manipulator_PPO"
-    algorithm = "PPO"
-    num_timesteps = 80000
+    model_name = "manipulator_DQN"
+    algorithm = "DQN"
+    num_timesteps = 1000000
 
     env = CustomEnv()
     env.x_goal = -1
     env.y_goal = 1
     env.z_goal = 2
+    env.set_goal()
     time.sleep(2)
-    # train(model_name,algorithm,num_timesteps)
+    train(model_name,algorithm,num_timesteps)
     test(model_name,algorithm)
 exit(0)
 
