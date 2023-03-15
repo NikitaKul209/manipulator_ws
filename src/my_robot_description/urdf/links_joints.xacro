@@ -6,7 +6,7 @@
     <xacro:macro name = "m_joint" params = "name type axis_xyz origin_rpy origin_xyz parent child lower upper">
         <joint name="${name}" type="${type}">
             <axis xyz="${axis_xyz}" />
-            <limit effort="1000.0" lower="${lower}" upper="${upper}" velocity="0.5" />
+            <limit effort="1000.0" lower="${lower}" upper="${upper}" velocity="1" />
             <origin rpy="${origin_rpy}" xyz="${origin_xyz}"/>
             <parent link="${parent}"/>
             <child link="${child}"/>
@@ -101,5 +101,25 @@
             </visual>
         </link>
     </xacro:macro>
+
+
+     <xacro:macro name = "m_link_goal" params = "name origin_xyz origin_rpy radius mass ixx ixy ixz iyy iyz izz">
+        <link name="${name}">
+
+            <inertial>
+                <origin xyz="${origin_xyz}" rpy="${origin_rpy}"/>
+                <mass value="${mass}"/>
+                <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}"/>
+            </inertial>
+
+            <visual>
+                <origin rpy="${origin_rpy}" xyz="${origin_xyz}"/>
+                <geometry>
+                    <sphere radius="${radius}"/>
+                </geometry>
+            </visual>
+        </link>
+    </xacro:macro>
+
 
 </robot>    

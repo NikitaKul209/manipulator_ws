@@ -12,8 +12,8 @@
     <xacro:m_link_cylinder name = "link_03" origin_xyz= "0 0 0.4 " origin_rpy = "0 0 0" radius= "0.08" length= "0.8" mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
     <xacro:m_link_sphere name = "link_04" origin_xyz= "0 0 0.05 " origin_rpy = "0 0 0" radius= "0.05"  mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
     <xacro:m_joint name ="base_link_link_01" type = "revolute" axis_xyz = "0 0 1" origin_rpy="0 0 0" origin_xyz="0 0 0.5" parent="base_link" child="link_01" lower ="-3.14" upper= "3.14"/>
-    <xacro:m_joint name ="link_01_link_02" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.4" parent="link_01" child="link_02" lower ="-1.57" upper= "1.57"/>
-    <xacro:m_joint name ="link_02_link_03" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_02" child="link_03" lower ="-1.57" upper= "1.57"/>
+    <xacro:m_joint name ="link_01_link_02" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.4" parent="link_01" child="link_02" lower ="-2.094" upper= "2.094"/>
+    <xacro:m_joint name ="link_02_link_03" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_02" child="link_03" lower ="-2.094" upper= "2.094"/>
     <xacro:m_joint name ="link_03_link_04" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_03" child="link_04" lower ="0" upper= "0"/>
     <!-- 
     <transmission name="trans_${link_01_link_02}">

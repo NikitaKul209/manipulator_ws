@@ -166,6 +166,28 @@ class CustomEnv(gym.Env):
         observation = np.float32(np.array([self.angles[0],self.angles[1],self.angles[2], self.position[0], self.position[1], self.position[2]]))
         return observation  # reward, done, info can't be included
 
+    def set_goal(self):
+
+        rospy.wait_for_service('my_robot/gazebo/set_model_state')
+        set_state_service = rospy.ServiceProxy('/my_robot/gazebo/set_model_state', SetModelState)
+        objstate = SetModelStateRequest()  # Create an object of type SetModelStateRequest
+        objstate.model_state.model_name = "goal"
+        objstate.model_state.pose.position.x = 1.0
+        objstate.model_state.pose.position.y = 1.0
+        objstate.model_state.pose.position.z = 1.0
+        objstate.model_state.pose.orientation.w = 0.0
+        objstate.model_state.pose.orientation.x = 0
+        objstate.model_state.pose.orientation.y = 0
+        objstate.model_state.pose.orientation.z = 0.0
+        objstate.model_state.twist.linear.x = 0.0
+        objstate.model_state.twist.linear.y = 0.0
+        objstate.model_state.twist.linear.z = 0.0
+        objstate.model_state.twist.angular.x = 0.0
+        objstate.model_state.twist.angular.y = 0.0
+        objstate.model_state.twist.angular.z = 0.0
+        result = set_state_service(objstate)
+
+
 def test(model_name,algorithm):
     if algorithm == 'PPO':
         model = PPO.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
@@ -190,7 +212,7 @@ def train(model_name, algorithm,num_timesteps):
         env.reset()
         try:
             if algorithm == 'DQN':
-                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000,gamma=0.8,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
+                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000,gamma=0.95,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
             if algorithm =="PPO":
                 model = PPO('MlpPolicy', env, device='cuda',verbose=1,gamma=0.8,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/PPO").learn(total_timesteps=num_timesteps,tb_log_name=model_name)
             print("Обучение завершено!")
@@ -213,14 +235,15 @@ def train_old_model(algorithm,model_name,num_timesteps):
 if __name__ == "__main__":
     rospy.init_node("manipulator_control", anonymous=True)
 
-    model_name = "manipulator_PPO"
-    algorithm = "PPO"
-    num_timesteps = 100000
+    model_name = "manipulator_DQN"
+    algorithm = "DQN"
+    num_timesteps = 1000000
 
     env = CustomEnv()
     env.x_goal = -1
     env.y_goal = 1
     env.z_goal = 2
+    env.set_goal()
     time.sleep(2)
     train(model_name,algorithm,num_timesteps)
     test(model_name,algorithm)
