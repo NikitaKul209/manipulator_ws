@@ -49,10 +49,10 @@ class CustomEnv(gym.GoalEnv):
         self.angle1 = 0
         self.angle2 = 0
         self.angle3 = 0
-        self.angles = [self.angle1,self.angle2,self.angle3]
+        self.angles =np.array([self.angle1,self.angle2,self.angle3])
 
 
-        self.position = [1,2,3]
+        self.position = np.array([0,0,0,0,0,0])
         self.possible_angles = []  # Возможные значения углов для поворота
         for i in range(-2, 4, 2):
             self.possible_angles.append(i)
@@ -96,9 +96,9 @@ class CustomEnv(gym.GoalEnv):
         # )
 
         self.observation_space = gym.spaces.Dict(dict(
-        observation = gym.spaces.Box(low=np.float32(np.array([-180,-120.0, -120.0, -1,-1,-1])),
-                                     high=np.float32(np.array([180,120.0, 120.0, 1,1,1])), dtype=np.float32, shape=(6,)),
-        achieved_goal = gym.spaces.Box(low=np.float32(np.array([-1.0, -1.0,-1.0])), high=np.float32(np.array([1.0, 1.0,1.0])),
+        observation = gym.spaces.Box(low=np.float32(np.array([-180,-120.0, -120.0, -np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf])),
+                                     high=np.float32(np.array([180,120.0, 120.0, np.inf,np.inf,np.inf,np.inf,np.inf,np.inf])), dtype=np.float32, shape=(9,)),
+        achieved_goal = gym.spaces.Box(low=np.float32(np.array([-np.inf,-np.inf,-np.inf])), high=np.float32(np.array([np.inf,np.inf,np.inf])),
                                        dtype=np.float32, shape=(3,)),
         desired_goal = gym.spaces.Box(low=np.float32(np.array([-1.0, -1.0,-1.0])), high=np.float32(np.array([1.0, 1.0,1.0])),
                                       dtype=np.float32, shape=(3,))
@@ -106,13 +106,11 @@ class CustomEnv(gym.GoalEnv):
 
 
     def _get_obs(self):
-        obs = np.array([
+        obs = np.concatenate([
             self.angles,
             self.position
-
-        ], dtype="float32").ravel()
-
-        achieved_goal = np.array(self.position, dtype="float32").ravel()
+        ], dtype="float32")
+        achieved_goal = np.array(self.position[0:3], dtype="float32").ravel()
 
         return {
             "observation": obs.copy(),
@@ -153,12 +151,17 @@ class CustomEnv(gym.GoalEnv):
 
 
     def callback_links(self,msg):
-        ind = msg.name.index('my_robot::link_04')
-        pos = msg.pose[ind]
-        x = pos.position.x
-        y = pos.position.y
-        z = pos.position.z
-        position = [x, y, z]
+        ind1 = msg.name.index('my_robot::link_04')
+        ind2 = msg.name.index('my_robot::link_05')
+        pos1 = msg.pose[ind1]
+        pos2 = msg.pose[ind2]
+        x1 = pos1.position.x
+        y1 = pos1.position.y
+        z1 = pos1.position.z
+        x2 = pos2.position.x
+        y2 = pos2.position.y
+        z2 = pos2.position.z
+        position = [x1, y1, z1,x2,y2,z2]
         self.position = position
 
     def step(self, action):
@@ -192,10 +195,10 @@ class CustomEnv(gym.GoalEnv):
         # }
         info = {}
         reward = float(self.compute_reward(obs["achieved_goal"], obs["desired_goal"],info ))
-        print(reward)
 
         terminated = False
-        # print("Итерация: {}\nТекущая длина эпизода: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: {}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".format(self.iteration,self.episode_length,self.goal,self.commands[action],self.angles[0],self.angles[1],self.angles[2],self.position[0],self.position[1],self.position[2],self.reward))
+
+        print("Итерация: {}\nТекущая длина эпизода: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: {}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".format(self.iteration,self.episode_length,self.goal,self.commands[action],self.angles[0],self.angles[1],self.angles[2],self.position[0],self.position[1],self.position[2],reward))
 
         rospy.sleep(0.01)
         return obs, reward,terminated, info
@@ -245,11 +248,10 @@ class CustomEnv(gym.GoalEnv):
         time.sleep(0.9)
         range1 = random.uniform(0.5,1)
         range2 = random.uniform(-1,-0.5)
-        # random.choice([range1,range2])
-        # random.choice([random.choice(range1),random.choice(range2)])
-        # self.goal[0],self.goal[1],self.goal[2] = random.uniform(-10,10)/10,random.uniform(-10,10)/10,random.uniform(5,10)/10
+        range3 = random.uniform(0.5, 1)
+        range4 = random.uniform(-1, -0.5)
 
-        self.goal[0], self.goal[1], self.goal[2] =   random.choice([range1,range2]), random.choice([range1,range2]),random.uniform(0.5,1)
+        self.goal[0], self.goal[1], self.goal[2] =   random.choice([range1,range2]), random.choice([range3,range4]),random.uniform(0.5,1)
 
         self.set_goal(self.goal[0],self.goal[1],self.goal[2])
 
@@ -304,7 +306,7 @@ def train(model_name, algorithm,num_timesteps):
                 # Parameters for HER
                 replay_buffer_kwargs=dict(
                     goal_selection_strategy="episode",
-                    n_sampled_goal=4,
+                    n_sampled_goal=8,
                     max_episode_length=MAX_EPISODE_LEN,
                     online_sampling=True,
                     handle_timeout_termination=True
@@ -359,7 +361,7 @@ if __name__ == "__main__":
 
     model_name = "manipulator_DQN"
     algorithm = "DQN"
-    num_timesteps = 1000000
+    num_timesteps = 10000000
 
 
     time.sleep(2)
