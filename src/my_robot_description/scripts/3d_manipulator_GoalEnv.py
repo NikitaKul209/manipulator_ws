@@ -4,12 +4,14 @@ import time
 import math
 
 import gym
+import numpy
 import numpy as np
 import rospy
 import roslib
 import sys
 import rospkg
 import random
+import itertools
 
 from functools import partial
 from std_srvs.srv import Empty
@@ -25,86 +27,61 @@ from stable_baselines3 import PPO,DQN
 from stable_baselines3 import HerReplayBuffer
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-from stable_baselines3.common.env_checker import check_env
-# tensorboard --logdir=/home/nikita/manipulator_ws/src/my_robot_description/logs/logs_3d_manipulator/PPO/manipulator_PPO_1
-
-
 class CustomEnv(gym.GoalEnv):
     """Custom Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, ):
+    def __init__(self,
+                 reward_type = None,
+                 render_mode = "human",
+                 static_goal=None,
+                 randomize_goal = True,
+                 angle_speed=5):
         super(CustomEnv, self).__init__()
 
         rospy.Subscriber('my_robot/gazebo/link_states', LinkStates, self.callback_links)
 
-        self.x_goal = -1
-        self.y_goal = 1            # В какую точку должен попасть конец второго звена
-        self.z_goal = 2
-        self.goal=[self.x_goal,self.y_goal,self.z_goal]
+        self.reward_type = reward_type
+        self.render_mode = render_mode
+        self.static_goal = static_goal
+        self.randomized_goal = randomize_goal
+        self.angle_speed = angle_speed
 
-
+        self.goal=np.zeros(3)
+        self.angles = np.zeros(3)
+        self.position = np.zeros(6)
         self.distance_threshold = 0.25
-
-        self.angle1 = 0
-        self.angle2 = 0
-        self.angle3 = 0
-        self.angles =np.array([self.angle1,self.angle2,self.angle3])
-
-
-        self.position = np.array([0,0,0,0,0,0])
-        self.possible_angles = []  # Возможные значения углов для поворота
-        for i in range(-2, 4, 2):
-            self.possible_angles.append(i)
-
-        fi = 5
-
-
-        self.commands = [(0, 0, 0), (0, 0, fi),(0, fi, 0),(0, fi, fi),(fi, 0, 0),(fi, 0, fi),(fi, fi, 0),
-                         (fi, fi, fi), (0, fi, -fi),(fi, 0, -fi),(fi, -fi, 0),(fi, fi, -fi),(fi, -fi, -fi),(fi, -fi, fi),
-                         (0, 0, -fi),(0, -fi, 0),(0, -fi, -fi),(-fi, 0, 0),(-fi, 0, -fi),(-fi, -fi, 0),(-fi, -fi, -fi),
-                         (0, -fi, fi),(-fi, 0, fi),(-fi, fi, 0),(-fi, -fi, fi),(-fi, fi, fi),(-fi, fi, -fi),]
-
         self.reward = 0
+        self.action = 0
         self.done = False
-
-        self.error = 0
         self.iteration = 0
-        self.episode_length = 0
+
+
+        self.commands =[]
+        for subset in itertools.product([angle_speed, -angle_speed, 0],repeat = 3):
+            self.commands.append(subset)
+
         self.action_space = gym.spaces.Discrete(len(self.commands))
-        obs = self._get_obs()
-        # self.observation_space = gym.spaces.Dict(
-        #     dict(
-        #         desired_goal=gym.spaces.Box(
-        #             low=np.array([-1,-1, -1], dtype="float32"),
-        #             high=np.array([1,1,1], dtype="float32"),
-        #             shape=obs["achieved_goal"].shape,
-        #             dtype="float32",
-        #         ),
-        #
-        #         achieved_goal=gym.spaces.Box(
-        #             low=-np.inf,
-        #             high=np.inf,
-        #             shape=obs["achieved_goal"].shape,
-        #             dtype="float32",
-        #         ),
-        #
-        #         observation=gym.spaces.Box(
-        #             -np.inf, np.inf, shape=obs["observation"].shape, dtype="float32"
-        #         ),
-        #     )
-        # )
-
         self.observation_space = gym.spaces.Dict(dict(
-        observation = gym.spaces.Box(low=np.float32(np.array([-180,-120.0, -120.0, -np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf])),
-                                     high=np.float32(np.array([180,120.0, 120.0, np.inf,np.inf,np.inf,np.inf,np.inf,np.inf])), dtype=np.float32, shape=(9,)),
-        achieved_goal = gym.spaces.Box(low=np.float32(np.array([-np.inf,-np.inf,-np.inf])), high=np.float32(np.array([np.inf,np.inf,np.inf])),
-                                       dtype=np.float32, shape=(3,)),
-        desired_goal = gym.spaces.Box(low=np.float32(np.array([-1.0, -1.0,-1.0])), high=np.float32(np.array([1.0, 1.0,1.0])),
-                                      dtype=np.float32, shape=(3,))
+        observation = gym.spaces.Box(
+            low=np.float32(np.array([-180,-120.0, -120.0, -np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf])),
+            high=np.float32(np.array([180,120.0, 120.0, np.inf,np.inf,np.inf,np.inf,np.inf,np.inf])),
+            dtype=np.float32,
+            shape=(9,)),
+
+        achieved_goal = gym.spaces.Box(
+            low=np.float32(np.array([-np.inf,-np.inf,-np.inf])),
+            high=np.float32(np.array([np.inf,np.inf,np.inf])),
+            dtype=np.float32,
+            shape=(3,)),
+
+        desired_goal = gym.spaces.Box(
+            low=np.float32(np.array([-1.0, -1.0,-1.0])),
+            high=np.float32(np.array([1.0, 1.0,1.0])),
+            dtype=np.float32,
+            shape=(3,))
         ))
-
-
+        obs = self._get_obs()
     def _get_obs(self):
         obs = np.concatenate([
             self.angles,
@@ -117,38 +94,20 @@ class CustomEnv(gym.GoalEnv):
             "achieved_goal": achieved_goal.copy(),
             "desired_goal": self.goal.copy()
         }
-
     def goal_distance(self,goal_a, goal_b):
         """
         Calculated distance between two goal poses (usually an achieved pose
         and a required pose).
         """
-
         return np.linalg.norm(goal_a - goal_b, axis=-1)
-
-
-
-    # def _is_success(self, achieved_goal, desired_goal):
-    #     d = self.goal_distance(achieved_goal, desired_goal)
-    #
-    #     return (d < self.distance_threshold).astype(np.float32)
-
-
-
-
-
 
     def compute_reward(self, achieved_goal, desired_goal,info):
         # Compute distance between goal and the achieved goal.
-
         d = (self.goal_distance(achieved_goal, desired_goal))
-        goal =  -(d > self.distance_threshold).astype(np.float32)
-
-        info ={}
-        return goal
-
-
-
+        if self.reward_type == "sparse":
+            return -(d > self.distance_threshold).astype(np.float32)
+        else:
+            return -d
 
     def callback_links(self,msg):
         ind1 = msg.name.index('my_robot::link_04')
@@ -161,49 +120,37 @@ class CustomEnv(gym.GoalEnv):
         x2 = pos2.position.x
         y2 = pos2.position.y
         z2 = pos2.position.z
-        position = [x1, y1, z1,x2,y2,z2]
+        position = [x1,y1,z1,x2,y2,z2]
         self.position = position
 
     def step(self, action):
 
         self.iteration +=1
-        self.episode_length +=1
+        self.action  = action
         self.angles[0] += self.commands[action][0]
         self.angles[1] += self.commands[action][1]
         self.angles[2] += self.commands[action][2]
 
-        if self.angles[0]>180:
-            self.angles[0]=180
-        if self.angles[0] < -180:
-            self.angles[0] = -180
-
-        if self.angles[1] > 120:
-            self.angles[1] = 120
-        if self.angles[1] < -120:
-            self.angles[1] = -120
-
-        if self.angles[2] > 120:
-            self.angles[2] = 120
-        if self.angles[2] < -120:
-            self.angles[2] = -120
-
+        self.angles[0] = np.clip(self.angles[0],-180,180)
+        self.angles[1:3] = np.clip(self.angles[1:3],-120,120)
         self.move_manipulator()
-        time.sleep(0.01)
         obs = self._get_obs()
-        # info = {
-        #     "is_success": self._is_success(obs["achieved_goal"], self.goal),
-        # }
         info = {}
-        reward = float(self.compute_reward(obs["achieved_goal"], obs["desired_goal"],info ))
+        self.reward = float(self.compute_reward(obs["achieved_goal"], obs["desired_goal"],info ))
 
         terminated = False
-
-        print("Итерация: {}\nТекущая длина эпизода: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: {}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".format(self.iteration,self.episode_length,self.goal,self.commands[action],self.angles[0],self.angles[1],self.angles[2],self.position[0],self.position[1],self.position[2],reward))
-
+        if self.render_mode == True:
+            self.render()
         rospy.sleep(0.01)
-        return obs, reward,terminated, info
+        return obs, self.reward,terminated, info
 
 
+    def render(self,mode ="human"):
+        print("Итерация: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: "
+              "{}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".
+              format(self.iteration,
+                     self.goal, self.commands[self.action], self.angles[0], self.angles[1], self.angles[2],
+                     self.position[0], self.position[1], self.position[2], self.reward))
 
     def move_manipulator(self):
         # rate = rospy.Rate(50)  # 50hz
@@ -211,17 +158,17 @@ class CustomEnv(gym.GoalEnv):
         for i in range(0,3):
             pub_angle = rospy.Publisher(angle_topics[i], Float64, queue_size=10)
             pub_angle.publish(self.angles[i]/180*math.pi)
-            # rate.sleep()
+        # time.sleep(0.01)
 
-    def set_goal(self,x,y,z):
+    def set_goal(self,goal):
 
         rospy.wait_for_service('/my_robot/gazebo/set_model_state')
         set_state_service = rospy.ServiceProxy('/my_robot/gazebo/set_model_state', SetModelState)
         objstate = SetModelStateRequest()  # Create an object of type SetModelStateRequest
         objstate.model_state.model_name = "goal"
-        objstate.model_state.pose.position.x = x
-        objstate.model_state.pose.position.y = y
-        objstate.model_state.pose.position.z = z
+        objstate.model_state.pose.position.x = goal[0]
+        objstate.model_state.pose.position.y = goal[1]
+        objstate.model_state.pose.position.z = goal[2]
         objstate.model_state.pose.orientation.w = 0.0
         objstate.model_state.pose.orientation.x = 0
         objstate.model_state.pose.orientation.y = 0
@@ -234,11 +181,14 @@ class CustomEnv(gym.GoalEnv):
         objstate.model_state.twist.angular.z = 0.0
         result = set_state_service(objstate)
 
-
+    def get_new_goal(self):
+        x = random.choice([random.uniform(0.5, 1), random.uniform(-1, -0.5)])
+        y = random.choice([random.uniform(0.5, 1), random.uniform(-1, -0.5)])
+        z = random.uniform(0.5, 1)
+        goal = [x,y,z]
+        return goal
     def reset(self):
         self.done = False
-        self.error = 0
-        self.episode_length = 0
         a1 = random.randrange(-180, 180, 5)
         a2 = random.randrange(-120, 120, 5)
         a3 = random.randrange(-120, 120, 5)
@@ -246,26 +196,27 @@ class CustomEnv(gym.GoalEnv):
         self.angles = [a1,a2,a3]
         self.move_manipulator()
         time.sleep(0.9)
-        range1 = random.uniform(0.5,1)
-        range2 = random.uniform(-1,-0.5)
-        range3 = random.uniform(0.5, 1)
-        range4 = random.uniform(-1, -0.5)
 
-        self.goal[0], self.goal[1], self.goal[2] =   random.choice([range1,range2]), random.choice([range3,range4]),random.uniform(0.5,1)
-
-        self.set_goal(self.goal[0],self.goal[1],self.goal[2])
-
+        if self.randomized_goal:
+            self.goal= self.get_new_goal()
+        else:
+            self.goal= np.array(self.static_goal)
+        self.set_goal(self.goal)
         observation = self._get_obs()
+
         return observation  # reward, done, info can't be included
 
+def make_env(max_episode_length,render_mode,randomized_goal,static_goal,reward_type):
+    env = CustomEnv(render_mode=render_mode,randomize_goal=randomized_goal,static_goal=static_goal,reward_type=reward_type)
+    if max_episode_length:
+        env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_length)
+    return env
 
 
 def test(model_name,algorithm):
     env = CustomEnv()
-    if algorithm == 'DQN':
-        model = DQN.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
+    model = DQN.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name)
     obs = env.reset()
-    i=0
     try:
         while not rospy.is_shutdown():
             print("Идёт тестирование")
@@ -274,14 +225,10 @@ def test(model_name,algorithm):
     except rospy.ROSInterruptException:
         pass
 
-def train(model_name, algorithm,num_timesteps):
+def train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type):
 
-        model_name = "manipulator_DQN_HER"
+        env = make_env(max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
         try:
-            MAX_EPISODE_LEN = 120
-            env = CustomEnv()
-            env = gym.wrappers.TimeLimit(env, max_episode_steps=  MAX_EPISODE_LEN )
-
             model = DQN(
                 "MultiInputPolicy",
                 env,
@@ -291,7 +238,7 @@ def train(model_name, algorithm,num_timesteps):
                 batch_size=256,  # 2048
                 tau=0.05,  # 1.0
                 gamma=0.95,
-                train_freq=(MAX_EPISODE_LEN, 'step'),
+                train_freq=(max_episode_length, 'step'),
                 gradient_steps=1,
                 optimize_memory_usage=False,
                 target_update_interval=1000,  # 10000
@@ -307,7 +254,7 @@ def train(model_name, algorithm,num_timesteps):
                 replay_buffer_kwargs=dict(
                     goal_selection_strategy="episode",
                     n_sampled_goal=8,
-                    max_episode_length=MAX_EPISODE_LEN,
+                    max_episode_length=max_episode_length,
                     online_sampling=True,
                     handle_timeout_termination=True
                 ),
@@ -343,8 +290,6 @@ def train_old_model(algorithm,model_name,num_timesteps):
 
         model = DQN.load("src/my_robot_description/models/3d_manipulator_model/"+algorithm+"/"+model_name,env=env)
 
-
-
     checkpoint_callback = CheckpointCallback(
                 save_freq=int(1e5),
                 save_path="../models/3d_manipulator_model_GoalEnv/" + model_name + "/checkpoints/",
@@ -359,13 +304,16 @@ def train_old_model(algorithm,model_name,num_timesteps):
 if __name__ == "__main__":
     rospy.init_node("manipulator_control", anonymous=True)
 
-    model_name = "manipulator_DQN"
-    algorithm = "DQN"
+    model_name = "manipulator_DQN_HER"
     num_timesteps = 10000000
+    max_episode_length = 300
+    render_mode = True
+    randomized_goal = False
+    static_goal = (1,1,1)
+    reward_type = "sparse"
 
+    train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
 
-    time.sleep(2)
-    train(model_name,algorithm,num_timesteps)
     # train_old_model(algorithm,model_name,num_timesteps)
     # test(model_name,algorithm)
 exit(0)
