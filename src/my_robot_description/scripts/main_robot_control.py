@@ -38,27 +38,20 @@ class CustomEnv(gym.Env):
 
         rospy.Subscriber('my_robot/gazebo/link_states', LinkStates, self.callback_links)
 
-        self.x_goal = -1
-        self.y_goal = 1            # В какую точку должен попасть конец второго звена
-        self.z_goal = 2
-        self.goal=[self.x_goal,self.y_goal,self.z_goal]
+        self.goal=np.zeros(3)
 
         self.delta_x = 0.1
         self.delta_y = 0.1
         self.delta_z = 0.1
 
-        self.angle1 = 0
-        self.angle2 = 0
-        self.angle3 = 0
-        self.angles = [self.angle1,self.angle2,self.angle3]
-
-
-        self.position = [1,2,3]
+        self.distance_threshold = 0.2
+        self.angles = np.zeros(3)
+        self.position = np.zeros(3)
         self.possible_angles = []  # Возможные значения углов для поворота
         for i in range(-2, 4, 2):
             self.possible_angles.append(i)
 
-        fi = 2
+        fi = 5
 
 
         self.commands = [(0, 0, 0), (0, 0, fi),(0, fi, 0),(0, fi, fi),(fi, 0, 0),(fi, 0, fi),(fi, fi, 0),
@@ -73,7 +66,7 @@ class CustomEnv(gym.Env):
         self.iteration = 0
         self.episode_length = 0
         self.action_space = gym.spaces.Discrete(len(self.commands))
-        self.observation_space = gym.spaces.Box(low=np.float32(np.array([-180,-90.0,-90.0,-20,-20,-20])),high= np.float32(np.array([180,90.0,90.0,20,20,20])),dtype = np.float32,shape=(6,))
+        self.observation_space = gym.spaces.Box(low=np.float32(np.array([-180,-120.0,-120.0,-20,-20,-20])),high= np.float32(np.array([180,120.0,120.0,20,20,20])),dtype = np.float32,shape=(6,))
 
     def callback_links(self,msg):
         ind = msg.name.index('my_robot::link_04')
@@ -82,7 +75,7 @@ class CustomEnv(gym.Env):
         y = pos.position.y
         z = pos.position.z
         position = [x, y, z]
-        env.position = position
+        self.position = position
 
     def step(self, action):
 
@@ -91,35 +84,11 @@ class CustomEnv(gym.Env):
         self.angles[0] += self.commands[action][0]
         self.angles[1] += self.commands[action][1]
         self.angles[2] += self.commands[action][2]
-
-        if self.angles[0]>180:
-            self.error = 1
-            self.angles[0]=180
-        if self.angles[0] < -180:
-            self.error = 1
-            self.angles[0] = -180
-
-        if self.angles[1] > 90:
-            self.error = 1
-            self.angles[1] = 90
-        if self.angles[1] < -90:
-            self.error = 1
-            self.angles[1] = -90
-
-        if self.angles[2] > 90:
-            self.error = 1
-            self.angles[2] = 90
-        if self.angles[2] < -90:
-            self.error = 1
-            self.angles[2] = -90
+        self.angles[0] = np.clip(self.angles[0], -180, 180)
+        self.angles[1:3] = np.clip(self.angles[1:3], -120, 120)
 
         self.move_manipulator()
         reward = self.reward_calc()
-        if self.episode_length >=500:
-            self.episode_length = 0
-            self.done = True
-
-
         observation = np.float32(np.array([self.angles[0],self.angles[1],self.angles[2], self.position[0], self.position[1], self.position[2]]))
         done = self.done
         info = {}
@@ -130,17 +99,14 @@ class CustomEnv(gym.Env):
     def reward_calc(self):
 
         d = math.sqrt(math.fabs(((self.goal[0] - self.position[0])**2)+(self.goal[1] - self.position[1])**2)+(self.goal[2] - self.position[2])**2)
-        self.reward = math.exp(-d)
+        # self.reward = math.exp(-d)
+        if d < self.distance_threshold:
+            self.reward = 0
+        else: self.reward = -1
+        # if math.fabs(self.position[0] - self.goal[0]) < self.delta_x and math.fabs(self.position[1]  - self.goal[1]) < self.delta_y and math.fabs(self.position[2]  - self.goal[2]) < self.delta_z \
+        #         and (self.angles[1] and self.angles[2]) in range(-160, 165):
+        #     self.reward =1000
 
-        if math.fabs(self.position[0] - self.x_goal) < self.delta_x and math.fabs(self.position[1]  - self.y_goal) < self.delta_y and math.fabs(self.position[2]  - self.z_goal) < self.delta_z \
-                and (self.angles[1] and self.angles[2]) in range(-160, 165):
-            self.done = 1
-            self.reward =1000
-
-        # if self.error == 1:
-        #     self.done = 1
-        #     self.reward = -100
-        self.error = 0
         return self.reward
 
     def move_manipulator(self):
@@ -155,9 +121,9 @@ class CustomEnv(gym.Env):
         self.done = False
         self.error = 0
         self.episode_length = 0
-        a1 = random.randrange(-180, 180, 2)
-        a2 = random.randrange(-90, 90, 2)
-        a3 = random.randrange(-90, 90, 2)
+        a1 = random.randrange(-180, 180, 5)
+        a2 = random.randrange(-120, 120, 5)
+        a3 = random.randrange(-120, 120, 5)
 
         self.angles = [a1,a2,a3]
         self.move_manipulator()
@@ -172,9 +138,9 @@ class CustomEnv(gym.Env):
         set_state_service = rospy.ServiceProxy('/my_robot/gazebo/set_model_state', SetModelState)
         objstate = SetModelStateRequest()  # Create an object of type SetModelStateRequest
         objstate.model_state.model_name = "goal"
-        objstate.model_state.pose.position.x = 1.0
-        objstate.model_state.pose.position.y = 1.0
-        objstate.model_state.pose.position.z = 1.0
+        objstate.model_state.pose.position.x = self.goal[0]
+        objstate.model_state.pose.position.y = self.goal[1]
+        objstate.model_state.pose.position.z = self.goal[2]
         objstate.model_state.pose.orientation.w = 0.0
         objstate.model_state.pose.orientation.x = 0
         objstate.model_state.pose.orientation.y = 0
@@ -197,12 +163,17 @@ def test(model_name,algorithm):
     i=0
     try:
         while not rospy.is_shutdown():
+
             print("Идёт тестирование")
             action, _states = model.predict(obs)
             obs, rewards, dones, info = env.step(action)
-            if rewards >= 100:
-                time.sleep(3)
+            i+=1
+            if i >= 200:
                 env.reset()
+                i = 0
+
+
+
 
     except rospy.ROSInterruptException:
         pass
@@ -212,7 +183,7 @@ def train(model_name, algorithm,num_timesteps):
         env.reset()
         try:
             if algorithm == 'DQN':
-                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=20000,gamma=0.95,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
+                model = DQN("MlpPolicy", env, device='cuda', verbose=1, learning_starts=50000,gamma=0.95,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/DQN").learn(total_timesteps=num_timesteps, tb_log_name=model_name)
             if algorithm =="PPO":
                 model = PPO('MlpPolicy', env, device='cuda',verbose=1,gamma=0.8,tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator/PPO").learn(total_timesteps=num_timesteps,tb_log_name=model_name)
             print("Обучение завершено!")
@@ -240,13 +211,13 @@ if __name__ == "__main__":
     num_timesteps = 1000000
 
     env = CustomEnv()
-    env.x_goal = -1
-    env.y_goal = 1
-    env.z_goal = 2
+    env.goal = [1, 1, 1.5]
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=200)
+
     env.set_goal()
     time.sleep(2)
     train(model_name,algorithm,num_timesteps)
-    test(model_name,algorithm)
+    # test(model_name,algorithm)
 exit(0)
 
 

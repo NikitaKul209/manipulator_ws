@@ -50,7 +50,7 @@ class CustomEnv(gym.GoalEnv):
         self.goal=np.zeros(3)
         self.angles = np.zeros(3)
         self.position = np.zeros(6)
-        self.distance_threshold = 0.25
+        self.distance_threshold = 0.6
         self.reward = 0
         self.action = 0
         self.done = False
@@ -60,7 +60,7 @@ class CustomEnv(gym.GoalEnv):
         self.commands =[]
         for subset in itertools.product([angle_speed, -angle_speed, 0],repeat = 3):
             self.commands.append(subset)
-
+        obs = self._get_obs()
         self.action_space = gym.spaces.Discrete(len(self.commands))
         self.observation_space = gym.spaces.Dict(dict(
         observation = gym.spaces.Box(
@@ -81,13 +81,13 @@ class CustomEnv(gym.GoalEnv):
             dtype=np.float32,
             shape=(3,))
         ))
-        obs = self._get_obs()
+
     def _get_obs(self):
         obs = np.concatenate([
             self.angles,
             self.position
         ], dtype="float32")
-        achieved_goal = np.array(self.position[0:3], dtype="float32").ravel()
+        achieved_goal = np.array(self.position[0:3], dtype="float32")
 
         return {
             "observation": obs.copy(),
@@ -195,7 +195,7 @@ class CustomEnv(gym.GoalEnv):
 
         self.angles = [a1,a2,a3]
         self.move_manipulator()
-        time.sleep(0.9)
+        time.sleep(0.8)
 
         if self.randomized_goal:
             self.goal= self.get_new_goal()
@@ -232,28 +232,28 @@ def train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goa
             model = DQN(
                 "MultiInputPolicy",
                 env,
-                learning_rate=0.001,  # 0.0001
-                buffer_size=int(1e5),  # 1e6
-                learning_starts=256,  # 2048
-                batch_size=256,  # 2048
-                tau=0.05,  # 1.0
-                gamma=0.95,
+                learning_rate=0.0001,  # 0.0001
+                buffer_size=int(1e6),  # 1e6
+                learning_starts=50000,  # 2048
+                batch_size=32,  # 2048
+                tau=1,  # 1.0
+                gamma=0.99,
                 train_freq=(max_episode_length, 'step'),
                 gradient_steps=1,
                 optimize_memory_usage=False,
-                target_update_interval=1000,  # 10000
+                target_update_interval=10000,  # 10000
                 exploration_fraction=0.1,  # 0.1
                 exploration_initial_eps=1.0,
                 exploration_final_eps=0.05,
                 max_grad_norm=10,
                 seed=None,
                 device='auto',
-                tensorboard_log="../logs/logs_3d_manipulator_GoalEnv/" + model_name,
+                tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator_GoalEnv/" + model_name,
                 replay_buffer_class=HerReplayBuffer,
                 # Parameters for HER
                 replay_buffer_kwargs=dict(
                     goal_selection_strategy="episode",
-                    n_sampled_goal=8,
+                    n_sampled_goal=4,
                     max_episode_length=max_episode_length,
                     online_sampling=True,
                     handle_timeout_termination=True
@@ -263,7 +263,7 @@ def train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goa
 
             checkpoint_callback = CheckpointCallback(
                 save_freq=int(1e5),
-                save_path="../models/3d_manipulator_model_GoalEnv/" + model_name + "/checkpoints/",
+                save_path="src/my_robot_description/models/3d_manipulator_model_GoalEnv/" + model_name + "/checkpoints/",
                 name_prefix=model_name,
 
             )
@@ -274,7 +274,7 @@ def train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goa
                 callback=checkpoint_callback
 
             )
-            model.save("../models/3d_manipulator_model_GoalEnv/" + model_name)
+            model.save("src/my_robot_description/models/3d_manipulator_model_GoalEnv/" + model_name)
 
             print("Обучение завершено!")
 
@@ -292,13 +292,13 @@ def train_old_model(algorithm,model_name,num_timesteps):
 
     checkpoint_callback = CheckpointCallback(
                 save_freq=int(1e5),
-                save_path="../models/3d_manipulator_model_GoalEnv/" + model_name + "/checkpoints/",
+                save_path="src/my_robot_description/models/3d_manipulator_model_GoalEnv/" + model_name + "/checkpoints/",
                 name_prefix=model_name,
                 save_replay_buffer=True,
                 save_vecnormalize=True,)
 
     model.learn(total_timesteps=num_timesteps,tb_log_name=model_name,callback=checkpoint_callback)
-    model.save("../models/3d_manipulator_model_GoalEnv/" + model_name)
+    model.save("src/my_robot_description/models/3d_manipulator_model_GoalEnv/" + model_name)
 
 
 if __name__ == "__main__":
