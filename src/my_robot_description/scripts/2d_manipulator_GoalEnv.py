@@ -257,15 +257,14 @@ class CustomEnv(gym.GoalEnv):
 def test(model_name,env):
     env = CustomEnv()
     model = DQN.load("../models/2d_manipulator_model_GoalEnv/"+model_name+"/checkpoints/manipulator_DQN_HER_5000000_steps",env=env)
-
     obs = env.reset()
-    i=0
+    iteration=0
     while True:
-        i+=1
+        iteration+=1
         action, _states = model.predict(obs, deterministic=True)
         obs, rewards, dones, info = env.step(action)
         env.graf()
-        if i == 60:
+        if iteration == 60:
             env.reset()
             i=0
 
