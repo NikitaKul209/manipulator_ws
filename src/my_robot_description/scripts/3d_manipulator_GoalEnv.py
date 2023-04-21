@@ -1,8 +1,10 @@
 
 #!/usr/bin/env python
+import cProfile
+import pstats
 import time
 import math
-
+import matplotlib.pyplot as plt
 import gym
 import numpy
 import numpy as np
@@ -27,6 +29,16 @@ from stable_baselines3 import PPO,DQN
 from stable_baselines3 import HerReplayBuffer
 from stable_baselines3.common.callbacks import CheckpointCallback
 
+def profile(func):
+    def wrapper(*args, **kwargs):
+        profile_filename = func.__name__ + '.prof'
+        profiler = cProfile.Profile()
+        result = profiler.runcall(func, *args, **kwargs)
+        profiler.dump_stats(profile_filename)
+        return result
+    return  wrapper()
+
+
 class CustomEnv(gym.GoalEnv):
     """Custom Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
@@ -50,11 +62,32 @@ class CustomEnv(gym.GoalEnv):
         self.goal=np.zeros(3)
         self.angles = np.zeros(3)
         self.position = np.zeros(6)
-        self.distance_threshold = 0.6
+        self.distance_threshold = 0.5
         self.reward = 0
         self.action = 0
         self.done = False
         self.iteration = 0
+
+        self.radius_angle = []
+        x0 = 0
+        y0 = 1.7
+        r = 0.8
+        n_points = 20
+        angle_step = (math.pi) / n_points
+
+        fig, ax = plt.subplots()
+
+        # circle = plt.Circle((x0, y0), r, fill=False)
+        # ax.add_artist(circle)
+
+        for i in range(n_points):
+            angle = i * angle_step
+            x =x0+ r * math.cos(angle)
+            y =y0+ r * math.sin(angle)
+            self.radius_angle.append([x, y])
+        plt.plot(self.radius_angle)
+        plt.show()
+
 
 
         self.commands =[]
@@ -64,20 +97,20 @@ class CustomEnv(gym.GoalEnv):
         self.action_space = gym.spaces.Discrete(len(self.commands))
         self.observation_space = gym.spaces.Dict(dict(
         observation = gym.spaces.Box(
-            low=np.float32(np.array([-180,-120.0, -120.0, -np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf])),
-            high=np.float32(np.array([180,120.0, 120.0, np.inf,np.inf,np.inf,np.inf,np.inf,np.inf])),
+            low=np.array([-180.0,-120.0, -120.0, -np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
+            high=np.array([180.0,120.0, 120.0, np.inf,np.inf,np.inf,np.inf,np.inf,np.inf]),
             dtype=np.float32,
             shape=(9,)),
 
         achieved_goal = gym.spaces.Box(
-            low=np.float32(np.array([-np.inf,-np.inf,-np.inf])),
-            high=np.float32(np.array([np.inf,np.inf,np.inf])),
+            low=np.array([-np.inf,-np.inf,-np.inf]),
+            high=np.array([np.inf,np.inf,np.inf]),
             dtype=np.float32,
             shape=(3,)),
 
         desired_goal = gym.spaces.Box(
-            low=np.float32(np.array([-1.0, -1.0,-1.0])),
-            high=np.float32(np.array([1.0, 1.0,1.0])),
+            low=np.array([-1.0, -1.0,-1.0]),
+            high=np.array([1.0, 1.0,3.0]),
             dtype=np.float32,
             shape=(3,))
         ))
@@ -87,7 +120,7 @@ class CustomEnv(gym.GoalEnv):
             self.angles,
             self.position
         ], dtype="float32")
-        achieved_goal = np.array(self.position[0:3], dtype="float32")
+        achieved_goal = np.array(self.position[0:3], dtype=np.float32)
 
         return {
             "observation": obs.copy(),
@@ -107,7 +140,9 @@ class CustomEnv(gym.GoalEnv):
         if self.reward_type == "sparse":
             return -(d > self.distance_threshold).astype(np.float32)
         else:
-            return -d
+            return  -d
+
+
 
     def callback_links(self,msg):
         ind1 = msg.name.index('my_robot::link_04')
@@ -123,12 +158,14 @@ class CustomEnv(gym.GoalEnv):
         position = [x1,y1,z1,x2,y2,z2]
         self.position = position
 
+
+
     def step(self, action):
 
         self.iteration +=1
         self.action  = action
-        self.angles[0] += self.commands[action][0]
-        self.angles[1] += self.commands[action][1]
+        self.angles[0] =0
+        self.angles[1] =0
         self.angles[2] += self.commands[action][2]
 
         self.angles[0] = np.clip(self.angles[0],-180,180)
@@ -141,7 +178,7 @@ class CustomEnv(gym.GoalEnv):
         terminated = False
         if self.render_mode == True:
             self.render()
-        rospy.sleep(0.01)
+
         return obs, self.reward,terminated, info
 
 
@@ -152,13 +189,14 @@ class CustomEnv(gym.GoalEnv):
                      self.goal, self.commands[self.action], self.angles[0], self.angles[1], self.angles[2],
                      self.position[0], self.position[1], self.position[2], self.reward))
 
+
     def move_manipulator(self):
-        # rate = rospy.Rate(50)  # 50hz
         angle_topics = ['/my_robot/joint1_position_controller/command','/my_robot/joint2_position_controller/command','/my_robot/joint3_position_controller/command']
         for i in range(0,3):
             pub_angle = rospy.Publisher(angle_topics[i], Float64, queue_size=10)
             pub_angle.publish(self.angles[i]/180*math.pi)
-        # time.sleep(0.01)
+        # rospy.sleep(0.01)
+
 
     def set_goal(self,goal):
 
@@ -184,21 +222,39 @@ class CustomEnv(gym.GoalEnv):
     def get_new_goal(self):
         x = random.choice([random.uniform(0.5, 1), random.uniform(-1, -0.5)])
         y = random.choice([random.uniform(0.5, 1), random.uniform(-1, -0.5)])
-        z = random.uniform(0.5, 1)
+        z = random.uniform(0.5, 2)
         goal = [x,y,z]
+
+
         return goal
+
+
+
+
+
+
     def reset(self):
         self.done = False
-        a1 = random.randrange(-180, 180, 5)
-        a2 = random.randrange(-120, 120, 5)
+        # a1 = random.randrange(-180, 180, 5)
+        # a2 = random.randrange(-120, 120, 5)
+        # a3 = random.randrange(-120, 120, 5)
+        a1 = 0
+        a2 = 0
         a3 = random.randrange(-120, 120, 5)
+
+
 
         self.angles = [a1,a2,a3]
         self.move_manipulator()
-        time.sleep(0.8)
+        time.sleep(0.7)
 
         if self.randomized_goal:
-            self.goal= self.get_new_goal()
+            # self.goal= self.get_new_goal()
+            goal =self.radius_angle[(random.randint(0,len(self.radius_angle)-1))]
+            self.goal =[goal[0],0,goal[1]]
+            print(self.goal)
+
+
         else:
             self.goal= np.array(self.static_goal)
         self.set_goal(self.goal)
@@ -227,23 +283,24 @@ def test(model_name,algorithm):
 
 def train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type):
 
+
         env = make_env(max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
         try:
             model = DQN(
                 "MultiInputPolicy",
                 env,
-                learning_rate=0.0001,  # 0.0001
-                buffer_size=int(1e6),  # 1e6
-                learning_starts=50000,  # 2048
-                batch_size=32,  # 2048
-                tau=1,  # 1.0
+                learning_rate=0.001,  # 0.0001
+                buffer_size=int(1e5),  # 1e6
+                learning_starts=10_000,  # 2048
+                batch_size=256,  # 2048
+                tau=0.1,  # 1.0
                 gamma=0.99,
                 train_freq=(max_episode_length, 'step'),
                 gradient_steps=1,
                 optimize_memory_usage=False,
-                target_update_interval=10000,  # 10000
+                target_update_interval=1000,  # 10000
                 exploration_fraction=0.1,  # 0.1
-                exploration_initial_eps=1.0,
+                exploration_initial_eps=0.1,
                 exploration_final_eps=0.05,
                 max_grad_norm=10,
                 seed=None,
@@ -265,6 +322,8 @@ def train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goa
                 save_freq=int(1e5),
                 save_path="src/my_robot_description/models/3d_manipulator_model_GoalEnv/" + model_name + "/checkpoints/",
                 name_prefix=model_name,
+                save_replay_buffer=True,
+                save_vecnormalize=True,
 
             )
 
@@ -301,18 +360,31 @@ def train_old_model(algorithm,model_name,num_timesteps):
     model.save("src/my_robot_description/models/3d_manipulator_model_GoalEnv/" + model_name)
 
 
-if __name__ == "__main__":
+def main():
     rospy.init_node("manipulator_control", anonymous=True)
 
     model_name = "manipulator_DQN_HER"
-    num_timesteps = 10000000
-    max_episode_length = 300
-    render_mode = True
-    randomized_goal = False
-    static_goal = (1,1,1)
+    num_timesteps = 10_000_000
+    max_episode_length = 1000
+    render_mode = False
+    randomized_goal = True
+    static_goal = (1, 1, 1)
     reward_type = "sparse"
 
-    train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
+    # train(model_name, num_timesteps, max_episode_length, render_mode, randomized_goal, static_goal, reward_type)
+    with cProfile.Profile() as pr:
+        train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
+    stats = pstats.Stats(pr)
+    stats.sort_stats(pstats.SortKey.TIME)
+    stats.print_stats()
+    stats.dump_stats(filename='profile.prof')
+
+if __name__ == "__main__":
+    main()
+
+
+
+    # train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
 
     # train_old_model(algorithm,model_name,num_timesteps)
     # test(model_name,algorithm)

@@ -1,22 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<robot name="my_robot"
-    xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="my_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
 
     <xacro:include filename="$(find my_robot_description)/urdf/links_joints.xacro"/>
 
-    <xacro:m_link_box name="base_link" origin_rpy="0 0 0" origin_xyz="0 0 0" size ="1 1 1" mass = "10240" ixx="170.667" ixy="0" ixz="0" iyy="170.667" iyz="0" izz="170.667"/>
 
-    <xacro:m_link_cylinder name = "link_01" origin_xyz= "0 0 0.2 " origin_rpy = "0 0 0" radius= "0.35" length= "0.4" mass = "157.663" ixx="13.235" ixy="0" ixz="0" iyy="13.235" iyz="0" izz="9.655"/>
-    <xacro:m_link_cylinder name = "link_02" origin_xyz= "0 0 0.4 " origin_rpy = "0 0 0" radius= "0.08" length= "0.8" mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
-    <xacro:m_link_cylinder name = "link_03" origin_xyz= "0 0 0.4 " origin_rpy = "0 0 0" radius= "0.08" length= "0.8" mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
-    <xacro:m_link_sphere name = "link_04" origin_xyz= "0 0 0.05 " origin_rpy = "0 0 0" radius= "0.05"  mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
-    <xacro:m_link_sphere name = "link_05" origin_xyz= "0 0 0.05 " origin_rpy = "0 0 0" radius= "0.05"  mass = "1" ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
-    <xacro:m_joint name ="base_link_link_01" type = "revolute" axis_xyz = "0 0 1" origin_rpy="0 0 0" origin_xyz="0 0 0.5" parent="base_link" child="link_01" lower ="-3.14" upper= "3.14"/>
-    <xacro:m_joint name ="link_01_link_02" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.4" parent="link_01" child="link_02" lower ="-2.094" upper= "2.094"/>
-    <xacro:m_joint name ="link_02_link_03" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_02" child="link_03" lower ="-2.094" upper= "2.094"/>
-    <xacro:m_joint name ="link_03_link_04" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_03" child="link_04" lower ="0" upper= "0"/>
-    <xacro:m_joint name ="link_02_link_05" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_02" child="link_05" lower ="0" upper= "0"/>
+    <xacro:m_link_base name="base_link" origin_rpy="0 0 0" origin_xyz="0 0 0.15" size="0.6 0.6 0.3" mass="1" ixx="0"
+                       ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+
+    <link name="world">
+
+    </link>
+    <joint name="dummy_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="world"/>
+        <child link="base_link"/>
+    </joint>
+    <xacro:m_link_plate name="link_01" origin_xyz="0 0 0.05 " origin_rpy="0 0 0" radius="0.2" length="0.1" mass="0.01"
+                        ixx="13.235" ixy="0" ixz="0" iyy="13.235" iyz="0" izz="9.655"/>
+    <xacro:m_link1 name="link_02" origin_xyz="0 0 0.31" origin_rpy="0 0 0" radius="0.08" length="0.62" mass="0.01"
+                   ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
+    <xacro:m_link2 name="link_03" origin_xyz="0 0 0.31 " origin_rpy="0 0 0" radius="0.08" length="0.62" mass="0.01"
+                   ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
+    <xacro:m_link3 name="link_04" origin_xyz="0 0 0.35 " origin_rpy="0 0 0" radius="0.05" length="0.5" mass="0.01"
+                   ixx="12.679" ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
+    <xacro:m_link_sphere name="link_05" origin_xyz="0 0 0.05 " origin_rpy="0 0 0" radius="0.05" mass="0.01" ixx="12.679"
+                         ixy="0" ixz="0" iyy="12.679" iyz="0" izz="0.651"/>
+
+    <xacro:m_joint name="base_link_link_01" type="revolute" axis_xyz="0 0 1" origin_rpy="0 0 0" origin_xyz="0 0 0.3"
+                   parent="base_link" child="link_01" lower="-3.14" upper="3.14"/>
+    <xacro:m_joint name="link_01_link_02" type="revolute" axis_xyz="0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.18"
+                   parent="link_01" child="link_02" lower="-2.094" upper="0"/>
+    <xacro:m_joint name="link_02_link_03" type="revolute" axis_xyz="0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.63"
+                   parent="link_02" child="link_03" lower="-2.094" upper="0"/>
+    <xacro:m_joint name="link_03_link_04" type="revolute" axis_xyz="0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.7"
+                   parent="link_03" child="link_04" lower="-1.57" upper="0"/>
+    <xacro:m_joint name="link_02_link_05" type="revolute" axis_xyz="0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.7"
+                   parent="link_02" child="link_05" lower="0" upper="0"/>
     <!-- 
     <transmission name="trans_${link_01_link_02}">
         <type>transmission_interface/SimpleTransmission</type>
@@ -28,7 +49,6 @@
             <mechanicalReduction>1</mechanicalReduction>
         </actuator>
     </transmission> -->
-
 
 
     <!-- <transmission name="trans_${link_02_link_03}">
@@ -109,6 +129,20 @@
 
 
     </gazebo>
-
+    <gazebo reference="base_link">
+        <material>Gazebo/Orange</material>
+    </gazebo>
+    <gazebo reference="link_01">
+        <material>Gazebo/Orange</material>
+    </gazebo>
+    <gazebo reference="link_02">
+        <material>Gazebo/Orange</material>
+    </gazebo>
+    <gazebo reference="link_03">
+        <material>Gazebo/Orange</material>
+    </gazebo>
+    <gazebo reference="link_04">
+        <material>Gazebo/Gray</material>
+    </gazebo>
 </robot>
 
