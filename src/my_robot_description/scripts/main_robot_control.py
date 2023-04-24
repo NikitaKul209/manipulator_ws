@@ -40,13 +40,13 @@ class CustomEnv(gym.GoalEnv):
     def __init__(self, ):
         super(CustomEnv, self).__init__()
 
-        rospy.Subscriber('my_robot/gazebo/link_states', LinkStates, self.callback_links)
+        rospy.Subscriber('gazebo/link_states', LinkStates, self.callback_links)
         rospy.Subscriber('goal/joint5_position_controller/state', JointControllerState
                          , self.callback_button_pose)
 
         self.goal = np.zeros(3)
 
-        self.distance_threshold = 0.1
+        self.distance_threshold = 0.2
         self.angles = np.zeros(4)
         self.position = np.zeros(6)
         self.btn_pos = 0
@@ -92,7 +92,7 @@ class CustomEnv(gym.GoalEnv):
             "achieved_goal": achieved_goal.copy(),
             "desired_goal": self.goal.copy(),
         }
-        self.timer = rospy.Timer(rospy.Duration(0.05), self.set_link)
+        self.timer = rospy.Timer(rospy.Duration(0.01), self.set_link)
 
     # obs = self._get_obs()
 
@@ -107,6 +107,7 @@ class CustomEnv(gym.GoalEnv):
         x2 = pos2.position.x
         y2 = pos2.position.y
         z2 = pos2.position.z
+
         position = np.array([x1, y1, z1, x2, y2, z2])
         self.position = position
 
@@ -158,7 +159,7 @@ class CustomEnv(gym.GoalEnv):
         reward = self.compute_reward(obs["achieved_goal"], obs["desired_goal"], info)
         done = self.done
 
-        # print("Итерация: {}\nТекущая длина эпизода: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: {}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".format(self.iteration,self.episode_length,self.goal,self.commands[action],self.angles[0],self.angles[1],self.angles[2],self.position[0],self.position[1],self.position[2],self.reward))
+        print("Итерация: {}\nТекущая длина эпизода: {}\nЦель: {}\nВыбрано действие: {}\nТекущий угол 1: {}\nТекущий угол 2: {}\nТекущий угол 3: {}\nТекущий угол 3: {}\nПозиция по Х: {}\nПозиция по Y: {}\nПозиция по Z: {}\nНаграда: {}\n".format(self.iteration,self.episode_length,self.goal,self.commands[action],self.angles[0],self.angles[1],self.angles[2],self.angles[3], self.position[0],self.position[1],self.position[2],reward))
         # rospy.sleep(0.001)
         return obs, reward, done, info
 
@@ -176,7 +177,7 @@ class CustomEnv(gym.GoalEnv):
             return 1+(1/self.btn_pos)
         # return -(d > self.distance_threshold).astype(np.float32)
         else:
-            return -d+(1/self.btn_pos)
+            return -d
 
     def move_manipulator(self):
         # rate = rospy.Rate(50) # 50hz
