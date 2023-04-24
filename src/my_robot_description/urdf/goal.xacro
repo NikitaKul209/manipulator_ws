@@ -3,9 +3,9 @@
 <robot name="goal" xmlns:xacro="http://www.ros.org/wiki/xacro">
     <xacro:include filename="$(find my_robot_description)/urdf/links_joints.xacro"/>
 
-    <xacro:m_link_wall name="base" origin_rpy="1.57 0 0 " origin_xyz="-0.25 0 -0.25" mass="100" ixx="0.0"
+    <xacro:m_link_wall name="base" origin_rpy="1.57 0 0 " origin_xyz="-0.5 0 -0.5" mass="100" ixx="0.0"
                        ixy="0" ixz="0" iyy="0.0" iyz="0" izz="0.0"/>
-    <xacro:m_link_button name="button" origin_rpy="0 0 0" origin_xyz="0.0 0.0 0.0" size="0.05 0.02 0.05" mass="0.1"
+    <xacro:m_link_button name="button" origin_rpy="0 0 0" origin_xyz="0.0 0.0 0.0" size="0.1 0.02 0.1" mass="0.1"
                          ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
 
     <joint name="wall_button" type="prismatic">
@@ -34,15 +34,10 @@
     </gazebo>
 
     <gazebo reference="base">
-<!--        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">-->
-<!--        </plugin>-->
         <gravity>0</gravity>
-
     </gazebo>
 
     <gazebo reference="button">
-<!--        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">-->
-<!--        </plugin>-->
         <gravity>0</gravity>
     </gazebo>
 </robot>
