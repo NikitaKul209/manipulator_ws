@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+        <group ns = "/my_robot">
+        <param name = "robot_description" command ="$(find xacro)/xacro --inorder '$(find my_robot_description)/urdf/robot.xacro'"/>
+
+
+
+        <arg name="world" default="$(find my_robot_description)/world/empty_world.world" />
+        <arg name="x" default= "0"/>
+        <arg name="y" default= "0"/>
+        <arg name="z" default= "0.5"/>
+
+        <arg name="paused" default="True"/>
+        <arg name="use_sim_time" default="true"/>
+        <arg name="gui" default="true"/>
+        <arg name="headless" default="false"/>
+        <arg name="debug" default="false"/>
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+           <arg name="world_name" value="$(arg world)" />
+            <arg name="debug" value="$(arg debug)" />
+            <arg name="gui" value="$(arg gui)" />
+            <arg name="paused" value="$(arg paused)"/>
+            <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+            <arg name="headless" value="$(arg headless)"/>
+
+        </include>
+
+
+        <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+            <param name="use_gui" value="True"/>
+        </node>
+        <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen"/>
+        <node name="my_robot_spawn" pkg="gazebo_ros" type ="spawn_model" output="screen"
+        args = "-urdf -param robot_description -model my_robot -gazebo_namespace /my_robot/gazebo -x $(arg x) -y $(arg y) -z $(arg z)"/>
+
+
+        <rosparam command = "load" file="$(find my_robot_description)/config/joints.yaml"/>
+
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/my_robot" args="--namespace=/my_robot
+            joint_state_controller
+            joint1_position_controller
+            joint2_position_controller
+            joint3_position_controller
+            joint4_position_controller
+            --timeout 60">
+        </node>
+
+
+    <param name = "goal" command ="$(find xacro)/xacro --inorder '$(find my_robot_description)/urdf/goal.xacro'"/>
+
+     <arg name="x2" default= "2"/>
+        <arg name="y2" default= "2"/>
+        <arg name="z2" default= "2"/>
+
+     <node name="goal_spawn" pkg="gazebo_ros" type ="spawn_model" output="screen"
+        args = "-urdf -param goal -model goal -gazebo_namespace /my_robot/gazebo -x $(arg x2) -y $(arg y2) -z $(arg z2)"/>
+
+    </group>
+
+
+
+
+</launch>
+

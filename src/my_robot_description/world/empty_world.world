@@ -2,6 +2,7 @@
 
 <sdf version="1.5">
 	<world name="my_world">
+
 		<!-- A global light source -->
 		<include>
 			<uri>model://sun</uri>
@@ -10,6 +11,7 @@
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>
       <real_time_update_rate>0</real_time_update_rate>
+      <sim_time>0</sim_time>
     </physics>
 		<!-- A ground plane -->
 		<include>

@@ -134,7 +134,7 @@ class CustomEnv(gym.GoalEnv):
         z2 = pos2.position.z
         position = np.array([x1,y1,z1,x2,y2,z2])
         # np.round(position,2)
-        self.position = position.copy()
+        self.position = position
 
     def step(self, action):
         if action not in self.action_space:
@@ -155,8 +155,7 @@ class CustomEnv(gym.GoalEnv):
         info = {
             "is_success": self._is_success(obs["achieved_goal"], obs["desired_goal"]),
         }
-        if self._is_success(obs["achieved_goal"], obs["desired_goal"]) == 1:
-                self.success = 1
+
 
         self.reward = float(self.compute_reward(obs["achieved_goal"], obs["desired_goal"],info ))
 
@@ -178,7 +177,7 @@ class CustomEnv(gym.GoalEnv):
         # rate = rospy.Rate(1000)  # 50hz
         angle_topics = ['/my_robot/joint1_position_controller/command','/my_robot/joint2_position_controller/command','/my_robot/joint3_position_controller/command']
         for i in range(0,3):
-            pub_angle = rospy.Publisher(angle_topics[i], Float64, queue_size=1)
+            pub_angle = rospy.Publisher(angle_topics[i], Float64, queue_size=20)
             pub_angle.publish(self.angles[i]/180*math.pi)
         # time.sleep(0.005)
         # rate.sleep()
@@ -263,32 +262,32 @@ def train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goa
             model = DQN(
                 "MultiInputPolicy",
                 env,
-                learning_rate=0.001,  # 0.0001
-                buffer_size=int(1e6),  # 1e6
-                learning_starts=256,  # 2048
-                batch_size=256,  # 2048
-                tau=0.1,  # 1.0
-                gamma=0.99,
-                train_freq=(max_episode_length, 'step'),
-                gradient_steps=1,
-                optimize_memory_usage=False,
-                target_update_interval=1000,  # 10000
-                exploration_fraction=0.1,  # 0.1
-                exploration_initial_eps=1.0,
-                exploration_final_eps=0.05,
-                max_grad_norm=10,
-                seed=None,
-                device='cuda',
+                # learning_rate=0.0001,  # 0.0001
+                # buffer_size=int(1e6),  # 1e6
+                # learning_starts=50000,  # 2048
+                batch_size=512,  # 2048
+                # tau=0.2,  # 1.0
+                # gamma=0.95,
+                # train_freq=(200, 'step'),
+                # gradient_steps=1,
+                # optimize_memory_usage=False,
+                # target_update_interval=1000,  # 10000
+                exploration_fraction=0.02,  # 0.1
+                # exploration_initial_eps=1.0,
+                # exploration_final_eps=0.05,
+                # max_grad_norm=10,
+                # seed=None,
+                # device='auto',
                 tensorboard_log="src/my_robot_description/logs/logs_3d_manipulator_GoalEnv/" + model_name,
-                replay_buffer_class=HerReplayBuffer,
-                # Parameters for HER
-                replay_buffer_kwargs=dict(
-                    goal_selection_strategy="episode",
-                    n_sampled_goal=4,
-                    max_episode_length=max_episode_length,
-                    online_sampling=True,
-                    handle_timeout_termination=True
-                ),
+                # replay_buffer_class=HerReplayBuffer,
+                # replay_buffer_kwargs=dict(
+                #     goal_selection_strategy="episode",
+                #     n_sampled_goal=4,
+                #     max_episode_length=200,
+                #     online_sampling=True,
+                #     handle_timeout_termination=True,
+                #
+                # ),
                 verbose=0,
             )
 
@@ -318,7 +317,7 @@ def train_old_model(model_name,num_timesteps, max_episode_length, render_mode):
     env = gym.wrappers.TimeLimit(env, max_episode_steps= max_episode_length)
 
     # model = DQN.load("src/my_robot_description/models/3d_manipulator_model_GoalEnv/"+model_name+"/checkpoints/manipulator_DQN_HER_1100000_steps",env=env)
-    model = DQN.load("src/my_robot_description/models/3d_manipulator_model_GoalEnv/"+model_name+"/checkpoints/manipulator_DQN_HER_FUTURE_0.3_exp_fraction_batch_2048_final_1000000_steps",env=env)
+    model = DQN.load("src/my_robot_description/models/3d_manipulator_model_GoalEnv/"+model_name+"/checkpoints/"+model_name+"_2400000_steps",env=env)
 
     checkpoint_callback = CheckpointCallback(
                 save_freq=int(1e5),
@@ -337,14 +336,17 @@ def main():
     time.sleep(2)
     rospy.init_node("manipulator_control", anonymous=True)
 
-    Profile = True
 
-    model_name = "manipulator_DQN_HER_episode_tau_0.2"
+
+    Profile = False
+    train_old = False
+
+    model_name = "manipulator_DQN_HER_OFF"
     num_timesteps = 5_000_000
     max_episode_length = 2000
     render_mode = False
-    randomized_goal = True
-    static_goal = (1,1,1)
+    randomized_goal = False
+    static_goal = (1,1,2)
     reward_type = "sparse"
 
 
@@ -356,8 +358,11 @@ def main():
             # stats.print_stats()
             stats.dump_stats(filename='profile.prof')
     else:
-        train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
-    # train_old_model(model_name,num_timesteps,max_episode_length, render_mode)
+        if train_old == True:
+            train_old_model(model_name, num_timesteps, max_episode_length, render_mode)
+        else:
+            train(model_name,num_timesteps,max_episode_length,render_mode,randomized_goal,static_goal,reward_type)
+
     # test(model_name)
 
 

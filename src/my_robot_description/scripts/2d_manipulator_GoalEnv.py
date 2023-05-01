@@ -131,6 +131,7 @@ class CustomEnv(gym.GoalEnv):
     def compute_reward(self, achieved_goal, desired_goal, info):
         # Compute distance between goal and the achieved goal.
         d = self.goal_distance(achieved_goal, desired_goal)
+        print(d)
         if self.reward_type == "sparse":
             return -(d > self.distance_threshold).astype(np.float32)
         else:
@@ -228,22 +229,23 @@ class CustomEnv(gym.GoalEnv):
 
     def graf(self):
         plt.ion()
-        plt.title("График поворота")
+        plt.title("Manipulator and goal")
         plt.xlim([-1.2, 1.2])
         plt.ylim(-1.2, 1.2)
         plt.grid()
         plt.xlabel('x - axis')
         plt.ylabel('y - axis')
 
-        plt.plot(self.goal[0],self.goal[1],'-*')
+        plt.plot(self.goal[0],self.goal[1],'-*', label = 'Goal pose',)
+
         # graf1_x = [0, 3, 7]
         # graf1_y = [0, 4, 1]
         # plt.plot(graf1_x, graf1_y, '-*', label ="До поворота" )
         graf2_x = [0, self.x0, self.x00]
         graf2_y = [0, self.y0, self.y00]
-        plt.plot(graf2_x, graf2_y, '-*', label = 'После поворота первого звена на {} и второго звена на {}.\n '
-                                                 '"-" - Вращение по часовой стрелке.\n'
-                                                 '"+" - Вращение против часовой стрелки '
+        plt.tick_params(axis='both', which='major', labelsize=16)
+        plt.rcParams.update({'font.size': 16})
+        plt.plot(graf2_x, graf2_y, '-*',label = 'Current pose'
                                                  .format(self.real_angle_first_old,self.real_angle_second_old))
         plt.legend()
         plt.show()
@@ -257,6 +259,9 @@ class CustomEnv(gym.GoalEnv):
 def test(model_name,env):
     env = CustomEnv()
     model = DQN.load("../models/2d_manipulator_model_GoalEnv/"+model_name+"/checkpoints/manipulator_DQN_HER_5000000_steps",env=env)
+    print(model.policy.net_arch)
+
+    print(list(model.policy.parameters()))
     obs = env.reset()
     iteration=0
     while True:
@@ -297,7 +302,7 @@ def train(model_name,num_timesteps,max_episode_len,env,MAX_EPISODE_LEN = 120):
             goal_selection_strategy="episode",
             n_sampled_goal=4,
             max_episode_length=MAX_EPISODE_LEN,
-            online_sampling=True,
+            online_sampling=False,
             handle_timeout_termination=True
         ),
         verbose=0,
@@ -323,6 +328,7 @@ def train_old_model(model_name,num_timesteps):
 
     model = DQN.load("../models/2d_manipulator_model_GoalEnv/"+model_name+"/checkpoints/manipulator_DQN_HER_5000000_steps",env=env)
     model.set_env(env)
+
     checkpoint_callback = CheckpointCallback(
         save_freq=int(1e6),
         save_path="../models/2d_manipulator_model_GoalEnv/" + model_name + "/checkpoints/",
@@ -342,13 +348,13 @@ def make_env(max_episode_len,render):
     return  env
 
 if __name__ == '__main__':
-    max_episode_len = 120
-    num_timesteps = 5000000
+    max_episode_len = 200
+    num_timesteps = 10_000_000
     model_name = "manipulator_DQN_HER"
 
     # check_env(env)
     env = make_env(max_episode_len,render = False)
-    # train(model_name,num_timesteps,max_episode_len,env)
+    train(model_name,num_timesteps,max_episode_len,env)
     # train_old_model(model_name,num_timesteps)
     test(model_name,env)
 

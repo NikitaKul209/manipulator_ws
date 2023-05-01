@@ -21,8 +21,10 @@ joint4_position_controller:
  type: effort_controllers/JointPositionController
  joint: link_03_link_04
  pid: {p: 20000.0, i: 50, d: 700.0}
-
-
+#joint5_position_controller:
+# type: effort_controllers/JointPositionController
+# joint: wall_button
+# pid: {p: 200.0, i: 0.1, d: 0.1}
 
 
 #Разкомментировать для подачи скорости на вход

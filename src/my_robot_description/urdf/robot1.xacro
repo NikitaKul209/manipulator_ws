@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<robot name="my_robot"
+    xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find my_robot_description)/urdf/links_joints.xacro"/>
+
+    <link name = "world"></link>
+    <joint  name ="world_joint" type ="fixed"> <origin xyz = "0 0 0" rpy = "0 0 0"/><parent link ="world"/><child link="base_link"/></joint>
+    <xacro:m_link_box name="base_link" origin_rpy="0 0 0" origin_xyz="0 0 0" size ="1 1 1" mass = "1" ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    <xacro:m_link_cylinder name = "link_01" origin_xyz= "0 0 0.2 " origin_rpy = "0 0 0" radius= "0.35" length= "0.4" mass = "1" ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    <xacro:m_link_cylinder name = "link_02" origin_xyz= "0 0 0.4 " origin_rpy = "0 0 0" radius= "0.08" length= "0.8" mass = "1" ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    <xacro:m_link_cylinder name = "link_03" origin_xyz= "0 0 0.4 " origin_rpy = "0 0 0" radius= "0.08" length= "0.8" mass = "1" ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    <xacro:m_link_sphere name = "link_04" origin_xyz= "0 0 0.05 " origin_rpy = "0 0 0" radius= "0.05"  mass = "0.1" ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    <xacro:m_link_sphere name = "link_05" origin_xyz= "0 0 0.05 " origin_rpy = "0 0 0" radius= "0.05"  mass = "0.1" ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    <xacro:m_joint name ="base_link_link_01" type = "revolute" axis_xyz = "0 0 1" origin_rpy="0 0 0" origin_xyz="0 0 0.5" parent="base_link" child="link_01" lower ="-3.14" upper= "3.14"/>
+    <xacro:m_joint name ="link_01_link_02" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.4" parent="link_01" child="link_02" lower ="-2.094" upper= "2.094"/>
+    <xacro:m_joint name ="link_02_link_03" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_02" child="link_03" lower ="-2.094" upper= "2.094"/>
+    <xacro:m_joint name ="link_03_link_04" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_03" child="link_04" lower ="0" upper= "0"/>
+    <xacro:m_joint name ="link_02_link_05" type = "revolute" axis_xyz = "0 1 0" origin_rpy="0 0 0" origin_xyz="0 0 0.8" parent="link_02" child="link_05" lower ="0" upper= "0"/>
+    <!-- 
+    <transmission name="trans_${link_01_link_02}">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="${link_01_link_02}">
+              <hardwareInterface>VelocityJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="motor_${link_01_link_02}">
+              <hardwareInterface>VelocityJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission> -->
+
+
+
+    <!-- <transmission name="trans_${link_02_link_03}">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="${link_02_link_03}">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="motor_${link_02_link_03}">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+            <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+    </transmission> -->
+
+    <!-- <link name="base_link">
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <box size="1 1 1"/>
+            </geometry>
+        </visual>
+    </link> -->
+
+    <!-- <joint name="base_link__link_01" type="revolute">
+        <axis xyz="0 0 1" />
+        <limit effort="1000.0" lower="-3.14" upper="3.14" velocity="0.5" />
+        <origin rpy="0 0 0" xyz="0 0 0.5"/>
+        <parent link="base_link"/>
+        <child link="link_01"/>
+    </joint> -->
+
+    <!-- <link name="link_01">
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 0.2"/>
+            <geometry>
+                <cylinder radius="0.35" length="0.4"/>
+            </geometry>
+        </visual>
+    </link> -->
+
+    <!-- <joint name ="link_01_link_02" type="revolute">
+        <axis xyz="0 1 0" />
+        <limit effort="1000.0" lower="-1.57" upper="1.57" velocity="0.5" />
+        <origin rpy="0 0 0" xyz="0 0 0.4"/>
+        <parent link="link_01"/>
+        <child link="link_02"/>
+    </joint> -->
+
+
+    <!-- <link name="link_02">
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 0.4"/>
+            <geometry>
+                <cylinder radius="0.15" length="0.8"/>
+            </geometry>
+        </visual>
+    </link> -->
+
+    <!-- <joint name ="link_02_link_03" type="revolute">
+        <axis xyz="0 1 0" />
+        <limit effort="1000.0" lower="-1.57" upper="1.57" velocity="0.5" />
+        <origin rpy="0 0 0" xyz="0 0 0.8"/>
+        <parent link="link_02"/>
+        <child link="link_03"/>
+    </joint> -->
+
+
+    <!-- <link name="link_03">
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 0.4"/>
+            <geometry>
+                <cylinder radius="0.15" length="0.8"/>
+            </geometry>
+        </visual>
+    </link> -->
+    <gazebo>
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+        </plugin>
+
+
+    </gazebo>
+
+</robot>
+
